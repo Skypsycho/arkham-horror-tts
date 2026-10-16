@@ -20,14 +20,23 @@ Browse, organize, and play generated audio from a library interface — or attac
 
 ### Prerequisites
 
-- Python 3.8+
+- [Python 3.8+](https://www.python.org/downloads/) (on Windows, check "Add Python to PATH" during installation)
 - An [ElevenLabs](https://elevenlabs.io) API key (for TTS generation)
 
 ### Installation
 
+Download or clone this repository:
+
 ```bash
 git clone https://github.com/Skypsycho/arkham-horror-tts.git
 cd arkham-horror-tts
+```
+
+Or click **Code > Download ZIP** on GitHub and extract it.
+
+Install dependencies:
+
+```bash
 pip install -r requirements.txt
 ```
 
