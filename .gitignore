@@ -1,0 +1,9 @@
+__pycache__/
+*.pyc
+audio/
+uploads/
+settings.json
+data/*.json
+voice_sample_*.mp3
+*.sections.json
+test_*.json

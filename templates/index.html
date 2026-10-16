@@ -1,0 +1,2189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Arkham Horror TTS</title>
+<style>
+:root {
+  --bg: #1a1a2e;
+  --bg2: #16213e;
+  --bg3: #0f3460;
+  --surface: #1e2a4a;
+  --surface2: #253557;
+  --text: #e0e0e0;
+  --text2: #a0a8c0;
+  --accent: #c9a959;
+  --accent2: #8b6914;
+  --danger: #c0392b;
+  --success: #27ae60;
+  --border: #2a3a5e;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+header {
+  background: var(--bg2);
+  border-bottom: 2px solid var(--accent2);
+  padding: 12px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+
+header h1 {
+  font-size: 20px;
+  color: var(--accent);
+  letter-spacing: 2px;
+  font-weight: 600;
+}
+
+.credits-indicator {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+  color: var(--text2);
+}
+
+.credits-bar {
+  width: 80px;
+  height: 6px;
+  background: var(--border);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.credits-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.3s;
+}
+
+.credits-fill.high { background: var(--success); }
+.credits-fill.medium { background: var(--accent); }
+.credits-fill.low { background: var(--danger); }
+
+.tabs {
+  display: flex;
+  gap: 4px;
+  background: var(--bg);
+  border-radius: 6px;
+  padding: 3px;
+}
+
+.tab {
+  padding: 8px 20px;
+  border: none;
+  background: transparent;
+  color: var(--text2);
+  cursor: pointer;
+  border-radius: 4px;
+  font-size: 14px;
+  transition: all 0.2s;
+}
+
+.tab:hover { color: var(--text); background: var(--surface); }
+.tab.active { background: var(--bg3); color: var(--accent); }
+
+.main { flex: 1; display: flex; overflow: hidden; }
+
+.tab-content { display: none; flex: 1; overflow: hidden; }
+.tab-content.active { display: flex; }
+
+/* ── Library Tab ── */
+#library-tab { display: flex; }
+
+.campaign-list {
+  width: 260px;
+  background: var(--bg2);
+  border-right: 1px solid var(--border);
+  overflow-y: auto;
+  flex-shrink: 0;
+}
+
+.campaign-list h3 {
+  padding: 16px;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text2);
+}
+
+.campaign-item {
+  padding: 12px 16px;
+  cursor: pointer;
+  border-bottom: 1px solid var(--border);
+  transition: background 0.15s;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.campaign-item:hover { background: var(--surface); }
+.campaign-item.active { background: var(--bg3); border-left: 3px solid var(--accent); }
+
+.campaign-item .campaign-info { flex: 1; min-width: 0; }
+
+.campaign-item .name {
+  font-size: 14px;
+  font-weight: 500;
+  margin-bottom: 4px;
+}
+
+.campaign-item .del-campaign-btn {
+  width: 24px;
+  height: 24px;
+  border: none;
+  background: transparent;
+  color: var(--text2);
+  cursor: pointer;
+  border-radius: 4px;
+  font-size: 14px;
+  flex-shrink: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+}
+
+.campaign-item:hover .del-campaign-btn { display: flex; }
+.campaign-item .del-campaign-btn:hover { background: var(--danger); color: #fff; }
+
+.campaign-item .meta {
+  font-size: 12px;
+  color: var(--text2);
+}
+
+.scenario-panel {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0;
+}
+
+.scenario-panel .empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--text2);
+  font-size: 16px;
+}
+
+.scenario-group {
+  border-bottom: 1px solid var(--border);
+}
+
+.scenario-header {
+  padding: 12px 20px;
+  background: var(--surface);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--accent);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  user-select: none;
+}
+
+.scenario-header:hover { background: var(--surface2); }
+.scenario-header.drag-over { background: var(--bg3); border-bottom: 2px solid var(--accent); }
+.scenario-header .arrow { transition: transform 0.2s; font-size: 10px; }
+.scenario-header.open .arrow { transform: rotate(90deg); }
+
+.scenario-header .scenario-name { flex: 1; }
+
+.scenario-header .del-campaign-btn { display: none; color: var(--danger); background: transparent; border: none; }
+.scenario-header:hover .del-campaign-btn { display: flex; }
+.scenario-header .del-campaign-btn:hover { background: var(--danger); color: #fff; }
+
+.scenario-header .add-sg-btn { display: none; color: var(--text2); }
+.scenario-header:hover .add-sg-btn { display: flex; }
+.scenario-header .add-sg-btn:hover { color: var(--accent); }
+
+.scenario-header .edit-name-btn {
+  width: 22px;
+  height: 22px;
+  border: none;
+  background: transparent;
+  color: var(--text2);
+  cursor: pointer;
+  border-radius: 3px;
+  font-size: 12px;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.scenario-header:hover .edit-name-btn { display: flex; }
+.scenario-header .edit-name-btn:hover { background: var(--surface2); color: var(--accent); }
+
+.subgroup-section {
+  margin-left: 16px;
+  border-left: 2px solid var(--border);
+}
+
+.subgroup-header {
+  padding: 8px 16px;
+  background: var(--bg2);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text2);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  user-select: none;
+}
+
+.subgroup-header:hover { background: var(--surface); color: var(--text); }
+.subgroup-header.drag-over { background: var(--bg3); border-bottom: 2px solid var(--accent); }
+.subgroup-header .arrow { transition: transform 0.2s; font-size: 8px; }
+.subgroup-header.open .arrow { transform: rotate(90deg); }
+
+.subgroup-header .edit-name-btn {
+  width: 18px;
+  height: 18px;
+  border: none;
+  background: transparent;
+  color: var(--text2);
+  cursor: pointer;
+  border-radius: 3px;
+  font-size: 10px;
+  display: none;
+  align-items: center;
+  justify-content: center;
+}
+
+.subgroup-header:hover .edit-name-btn { display: flex; }
+.subgroup-header .edit-name-btn:hover { color: var(--accent); }
+
+.subgroup-header .del-sg-btn {
+  display: none;
+  color: var(--danger);
+  background: transparent;
+  border: none;
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  border-radius: 3px;
+  font-size: 12px;
+  align-items: center;
+  justify-content: center;
+}
+
+.subgroup-header:hover .del-sg-btn { display: flex; }
+.subgroup-header .del-sg-btn:hover { background: var(--danger); color: #fff; }
+
+.subgroup-section.dragging { opacity: 0.4; }
+.subgroup-section.drag-over-section { border-top: 2px solid var(--accent); }
+
+.subgroup-header .subgroup-name-edit {
+  font-size: 12px;
+  padding: 2px 6px;
+  background: var(--bg);
+  border: 1px solid var(--accent);
+  border-radius: 3px;
+  color: var(--text);
+  outline: none;
+  text-transform: none;
+}
+
+.subgroup-entries { display: none; }
+.subgroup-entries.open { display: block; }
+
+.add-subgroup-btn {
+  margin: 4px 0 4px 16px;
+  padding: 4px 12px;
+  border: 1px dashed var(--border);
+  background: transparent;
+  color: var(--text2);
+  cursor: pointer;
+  border-radius: 4px;
+  font-size: 12px;
+  display: none;
+}
+
+.scenario-group:hover .add-subgroup-btn { display: inline-block; }
+.add-subgroup-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+.scenario-header .scenario-name-edit {
+  font-size: 14px;
+  font-weight: 600;
+  padding: 2px 8px;
+  background: var(--bg);
+  border: 1px solid var(--accent);
+  border-radius: 3px;
+  color: var(--accent);
+  outline: none;
+  flex: 1;
+}
+
+.entry-list { display: none; }
+.entry-list.open { display: block; }
+
+.entry-wrapper {
+  border-bottom: 1px solid rgba(255,255,255,0.03);
+}
+
+.entry-wrapper.dragging {
+  opacity: 0.4;
+}
+
+.entry-wrapper.drag-over {
+  border-top: 2px solid var(--accent);
+}
+
+.drag-handle {
+  cursor: grab;
+  color: var(--text2);
+  font-size: 16px;
+  padding: 0 2px;
+  user-select: none;
+  flex-shrink: 0;
+  opacity: 0.4;
+  transition: opacity 0.15s;
+}
+
+.drag-handle:hover { opacity: 1; }
+.drag-handle:active { cursor: grabbing; }
+
+body.is-dragging .entry-wrapper > * { pointer-events: none; }
+body.is-dragging .subgroup-header > * { pointer-events: none; }
+body.is-dragging .scenario-header > * { pointer-events: none; }
+
+.entry-item {
+  padding: 10px 20px 10px 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  transition: background 0.15s;
+}
+
+.entry-item:hover { background: var(--surface); }
+.entry-item.playing { background: var(--bg3); }
+
+.entry-item .play-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid var(--accent2);
+  background: transparent;
+  color: var(--accent);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  flex-shrink: 0;
+  transition: all 0.2s;
+}
+
+.entry-item .play-btn:hover { background: var(--accent2); color: #fff; }
+.entry-item .play-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+.entry-item .play-btn.playing-btn {
+  background: var(--accent);
+  color: var(--bg);
+  border-color: var(--accent);
+}
+
+.entry-info { flex: 1; min-width: 0; }
+
+.entry-info .label {
+  font-size: 13px;
+  font-weight: 500;
+  padding: 2px 4px;
+  border-radius: 3px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.entry-info .label .edit-label-btn {
+  width: 18px;
+  height: 18px;
+  border: none;
+  background: transparent;
+  color: var(--text2);
+  cursor: pointer;
+  border-radius: 3px;
+  font-size: 11px;
+  display: none;
+  align-items: center;
+  justify-content: center;
+}
+
+.entry-item:hover .edit-label-btn { display: flex; }
+.entry-info .label .edit-label-btn:hover { color: var(--accent); }
+
+.entry-info .label-edit {
+  font-size: 13px;
+  font-weight: 500;
+  padding: 2px 6px;
+  background: var(--bg);
+  border: 1px solid var(--accent);
+  border-radius: 3px;
+  color: var(--text);
+  outline: none;
+  width: 200px;
+}
+
+.entry-info .preview {
+  font-size: 12px;
+  color: var(--text2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 2px;
+  cursor: pointer;
+}
+
+.entry-info .preview:hover { color: var(--text); }
+
+.entry-actions {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.entry-actions .icon-btn {
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: transparent;
+  color: var(--text2);
+  cursor: pointer;
+  border-radius: 4px;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.entry-actions .icon-btn:hover { background: var(--surface2); color: var(--text); }
+
+.entry-actions .gen-btn { color: var(--success); }
+.entry-actions .gen-btn:hover { background: var(--success); color: #fff; }
+.entry-actions .gen-btn-label { width: auto; padding: 0 10px; font-size: 12px; gap: 4px; }
+.entry-actions .regen-btn { color: var(--accent); }
+.entry-actions .regen-btn:hover { background: var(--accent2); color: #fff; }
+.entry-actions .attach-btn { color: var(--text2); }
+.entry-actions .attach-btn:hover { background: var(--surface2); color: var(--accent); }
+.entry-actions .icon-btn.generating {
+  opacity: 0.5;
+  cursor: wait;
+  animation: pulse 1s ease-in-out infinite;
+}
+
+@keyframes pulse { 0%, 100% { opacity: 0.5; } 50% { opacity: 1; } }
+
+.entry-actions .info-btn { color: var(--text2); font-size: 13px; position: relative; }
+.entry-actions .info-btn:hover { color: var(--accent); }
+
+.info-popover {
+  display: none;
+  position: absolute;
+  bottom: 34px;
+  right: 0;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 12px;
+  color: var(--text2);
+  white-space: nowrap;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+  z-index: 10;
+  line-height: 1.6;
+}
+
+.info-popover.open { display: block; }
+
+
+.entry-expanded {
+  display: none;
+  padding: 0 20px 12px 80px;
+  background: var(--bg2);
+}
+
+.entry-expanded.open { display: block; }
+
+.entry-expanded textarea {
+  width: 100%;
+  min-height: 120px;
+  padding: 10px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text);
+  font-size: 13px;
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.entry-expanded textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.entry-expanded .expand-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.entry-expanded .char-count {
+  font-size: 11px;
+  color: var(--text2);
+  margin-top: 4px;
+}
+
+/* ── Audio Player Bar ── */
+.player-bar {
+  background: var(--bg2);
+  border-top: 2px solid var(--accent2);
+  padding: 10px 24px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-shrink: 0;
+  min-height: 56px;
+}
+
+.player-bar .player-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: none;
+  background: var(--accent);
+  color: var(--bg);
+  cursor: pointer;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.player-bar .player-btn:hover { background: var(--accent2); color: #fff; }
+.player-bar .player-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+.player-info {
+  min-width: 200px;
+}
+
+.player-info .now-playing {
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.player-info .now-scenario {
+  font-size: 11px;
+  color: var(--text2);
+}
+
+.progress-container {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.progress-bar {
+  flex: 1;
+  height: 4px;
+  background: var(--border);
+  border-radius: 2px;
+  cursor: pointer;
+  position: relative;
+}
+
+.progress-fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 2px;
+  width: 0%;
+  transition: width 0.1s;
+}
+
+.time-display {
+  font-size: 12px;
+  color: var(--text2);
+  min-width: 80px;
+  text-align: center;
+}
+
+/* ── Import Tab ── */
+#import-tab {
+  flex-direction: column;
+  padding: 32px;
+  gap: 24px;
+  overflow-y: auto;
+  max-width: 800px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.import-section {
+  background: var(--surface);
+  border-radius: 8px;
+  padding: 24px;
+  border: 1px solid var(--border);
+}
+
+.import-section h2 {
+  font-size: 16px;
+  color: var(--accent);
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.step-num {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--accent2);
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.form-row {
+  display: flex;
+  gap: 12px;
+  align-items: end;
+  margin-bottom: 12px;
+}
+
+.form-group { flex: 1; }
+
+.form-group label {
+  display: block;
+  font-size: 12px;
+  color: var(--text2);
+  margin-bottom: 4px;
+}
+
+input[type="text"], input[type="password"], input[type="file"] {
+  width: 100%;
+  padding: 8px 12px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text);
+  font-size: 14px;
+}
+
+input:focus { outline: none; border-color: var(--accent); }
+
+.btn {
+  padding: 8px 20px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.btn-primary { background: var(--accent); color: var(--bg); }
+.btn-primary:hover { background: var(--accent2); color: #fff; }
+.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-danger { background: var(--danger); color: #fff; }
+.btn-danger:hover { opacity: 0.8; }
+.btn-secondary { background: var(--surface2); color: var(--text); }
+.btn-secondary:hover { background: var(--bg3); }
+
+.status-msg {
+  margin-top: 12px;
+  font-size: 13px;
+  color: var(--text2);
+  min-height: 20px;
+}
+
+.status-msg.error { color: var(--danger); }
+.status-msg.success { color: var(--success); }
+
+.gen-progress {
+  margin-top: 12px;
+}
+
+.gen-progress-bar {
+  height: 8px;
+  background: var(--bg);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+
+.gen-progress-fill {
+  height: 100%;
+  background: var(--accent);
+  transition: width 0.3s;
+  width: 0%;
+}
+
+/* ── Settings Tab ── */
+#settings-tab {
+  flex-direction: column;
+  padding: 32px;
+  gap: 24px;
+  max-width: 600px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+/* ── Delete button on entries ── */
+.entry-actions .del-btn {
+  color: var(--text2);
+}
+
+.entry-actions .del-btn:hover {
+  background: var(--danger);
+  color: #fff;
+}
+
+/* ── Confirmation Modal ── */
+.modal-overlay {
+  display: none;
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.6);
+  z-index: 1000;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-overlay.open { display: flex; }
+
+.modal {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 24px;
+  max-width: 420px;
+  width: 90%;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+}
+
+.modal h3 {
+  font-size: 16px;
+  color: var(--accent);
+  margin-bottom: 12px;
+}
+
+.modal p {
+  font-size: 14px;
+  color: var(--text2);
+  margin-bottom: 20px;
+  line-height: 1.5;
+}
+
+.modal .modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.modal .keep-audio-label {
+  display: none;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+  font-size: 13px;
+  color: var(--text2);
+  cursor: pointer;
+}
+
+.modal .keep-audio-label.visible { display: flex; }
+
+.modal .keep-audio-label input[type="checkbox"] {
+  accent-color: var(--accent);
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>ARKHAM HORROR TTS</h1>
+  <div class="credits-indicator" id="creditsIndicator" title="ElevenLabs credits">
+    <div class="credits-bar"><div class="credits-fill" id="creditsFill"></div></div>
+    <span id="creditsText">--</span>
+  </div>
+  <div class="tabs">
+    <button class="tab active" data-tab="library-tab">Library</button>
+    <button class="tab" data-tab="import-tab">Import</button>
+    <button class="tab" data-tab="settings-tab">Settings</button>
+  </div>
+</header>
+
+<div class="main">
+  <!-- Library Tab -->
+  <div id="library-tab" class="tab-content active">
+    <div class="campaign-list" id="campaignList">
+      <h3>Campaigns</h3>
+    </div>
+    <div class="scenario-panel" id="scenarioPanel">
+      <div class="empty">Select a campaign to browse audio</div>
+    </div>
+  </div>
+
+  <!-- Import Tab -->
+  <div id="import-tab" class="tab-content">
+    <div class="import-section">
+      <h2><span class="step-num">1</span> Select Campaign PDF</h2>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Campaign Name (optional)</label>
+          <input type="text" id="campaignName" placeholder="e.g. The Dunwich Legacy">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>PDF File</label>
+          <input type="file" id="pdfFile" accept=".pdf">
+        </div>
+        <button class="btn btn-primary" id="extractBtn" onclick="extractPdf()">Extract Sections</button>
+      </div>
+      <div class="status-msg" id="extractStatus"></div>
+    </div>
+
+    <div class="import-section">
+      <h2><span class="step-num">2</span> Generate Audio</h2>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Campaign</label>
+          <select id="genCampaign" style="width:100%;padding:8px 12px;background:var(--bg);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:14px;">
+            <option value="">-- Select campaign --</option>
+          </select>
+        </div>
+        <button class="btn btn-primary" id="generateBtn" onclick="generateAudio()">Generate Audio</button>
+      </div>
+      <div class="gen-progress" id="genProgress" style="display:none;">
+        <div class="gen-progress-bar"><div class="gen-progress-fill" id="genProgressFill"></div></div>
+        <div class="status-msg" id="genStatus"></div>
+      </div>
+    </div>
+
+    <div class="import-section">
+      <h2><span class="step-num">3</span> Import Agenda/Act Cards from ArkhamDB</h2>
+      <p style="font-size:13px;color:var(--text2);margin-bottom:12px;">Fetch agenda and act card flavor text from ArkhamDB and add them to an existing campaign.</p>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Campaign</label>
+          <select id="arkhamdbCampaign" style="width:100%;padding:8px 12px;background:var(--bg);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:14px;">
+            <option value="">-- Select campaign --</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>ArkhamDB Packs (hold Ctrl/Cmd to select multiple)</label>
+          <select id="arkhamdbPack" multiple size="8" style="width:100%;padding:4px;background:var(--bg);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:13px;">
+            <option value="">Loading packs...</option>
+          </select>
+        </div>
+        <button class="btn btn-primary" id="arkhamdbBtn" onclick="importFromArkhamDB()">Import Cards</button>
+      </div>
+      <div class="status-msg" id="arkhamdbStatus"></div>
+    </div>
+  </div>
+
+  <!-- Settings Tab -->
+  <div id="settings-tab" class="tab-content">
+    <div class="import-section">
+      <h2>ElevenLabs Configuration</h2>
+      <div class="form-group" style="margin-bottom:12px">
+        <label>API Key</label>
+        <input type="password" id="settingsApiKey" placeholder="sk_...">
+      </div>
+      <div class="form-group" style="margin-bottom:12px">
+        <label>Voice ID</label>
+        <input type="text" id="settingsVoiceId" placeholder="e.g. 21m00Tcm4TlvDq8ikWAM">
+      </div>
+      <div class="form-group" style="margin-bottom:16px">
+        <label>TTS Model</label>
+        <select id="settingsModel" style="width:100%;padding:8px 12px;background:var(--bg);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:14px;">
+          <option value="eleven_v4">Eleven v4 (Latest, highest quality)</option>
+          <option value="eleven_v4_turbo">Eleven v4 Turbo (Fast, high quality)</option>
+          <option value="eleven_v3">Eleven v3</option>
+          <option value="eleven_multilingual_v2">Eleven Multilingual v2</option>
+          <option value="eleven_turbo_v2_5">Eleven Turbo v2.5 (Low latency)</option>
+          <option value="eleven_flash_v2_5">Eleven Flash v2.5 (Fastest)</option>
+          <option value="eleven_monolingual_v1">Eleven Monolingual v1 (Legacy)</option>
+        </select>
+      </div>
+      <button class="btn btn-primary" onclick="saveSettings()">Save Settings</button>
+      <div class="status-msg" id="settingsStatus"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Player Bar -->
+<div class="player-bar">
+  <button class="player-btn" id="playerPlayBtn" onclick="togglePlayback()" disabled>&#9654;</button>
+  <div class="player-info">
+    <div class="now-playing" id="nowPlaying">No track selected</div>
+    <div class="now-scenario" id="nowScenario"></div>
+  </div>
+  <div class="progress-container">
+    <div class="progress-bar" id="progressBar" onclick="seekAudio(event)">
+      <div class="progress-fill" id="progressFill"></div>
+    </div>
+    <div class="time-display" id="timeDisplay">0:00 / 0:00</div>
+  </div>
+</div>
+
+<audio id="audioEl"></audio>
+
+<!-- Confirmation Modal -->
+<div class="modal-overlay" id="confirmModal">
+  <div class="modal">
+    <h3 id="confirmTitle">Confirm Delete</h3>
+    <p id="confirmMessage">Are you sure?</p>
+    <label class="keep-audio-label" id="keepAudioLabel">
+      <input type="checkbox" id="keepAudioCheckbox" checked>
+      Keep audio files on disk
+    </label>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-danger" id="confirmBtn" onclick="confirmAction()">Delete</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const audioEl = document.getElementById('audioEl');
+let currentCampaignId = null;
+let currentCampaignData = null;
+let currentPlayingEntry = null;
+
+// ── Tabs ──
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById(tab.dataset.tab).classList.add('active');
+    if (tab.dataset.tab === 'import-tab') { refreshCampaignSelect(); loadArkhamDBPacks(); }
+    if (tab.dataset.tab === 'settings-tab') loadSettings();
+  });
+});
+
+// ── Library ──
+async function loadLibrary() {
+  const res = await fetch('/api/library');
+  const campaigns = await res.json();
+  const list = document.getElementById('campaignList');
+  list.innerHTML = '<h3>Campaigns</h3>';
+
+  if (campaigns.length === 0) {
+    list.innerHTML += '<div style="padding:16px;color:var(--text2);font-size:13px;">No campaigns yet. Use the Import tab to add one.</div>';
+    return;
+  }
+
+  campaigns.forEach(c => {
+    const el = document.createElement('div');
+    el.className = 'campaign-item' + (currentCampaignId === c.id ? ' active' : '');
+    el.innerHTML = `
+      <div class="campaign-info">
+        <div class="name">${escHtml(c.full_name)}</div>
+        <div class="meta">${c.generated_entries}/${c.total_entries} audio files</div>
+      </div>
+      <button class="del-campaign-btn" onclick="event.stopPropagation(); confirmDeleteCampaign('${c.id}', '${escAttr(c.full_name)}')" title="Delete campaign">&#10005;</button>
+    `;
+    el.onclick = () => selectCampaign(c.id);
+    list.appendChild(el);
+  });
+}
+
+async function selectCampaign(id) {
+  currentCampaignId = id;
+  document.querySelectorAll('.campaign-item').forEach(el => el.classList.remove('active'));
+  event.currentTarget?.classList.add('active');
+
+  const res = await fetch(`/api/campaign/${id}`);
+  currentCampaignData = await res.json();
+  renderScenarios();
+  loadLibrary();
+}
+
+function buildEntryWrapper(scenario, si, entry, ei) {
+  const wrapper = document.createElement('div');
+  wrapper.className = 'entry-wrapper';
+  wrapper.draggable = true;
+  wrapper.dataset.si = si;
+  wrapper.dataset.ei = ei;
+  wrapper.dataset.subgroup = entry.subgroup || '__none__';
+
+  wrapper.addEventListener('dragstart', onDragStart);
+  wrapper.addEventListener('dragend', onDragEnd);
+  wrapper.addEventListener('dragover', onDragOver);
+  wrapper.addEventListener('dragleave', onDragLeave);
+  wrapper.addEventListener('drop', onDrop);
+
+  const hasAudio = entry.has_audio;
+  const audioPath = entry.audio_file || `${currentCampaignId}/${scenario.scenario_folder}/${entry.label}.mp3`;
+
+  wrapper.innerHTML = `
+    <div class="entry-item" id="entry-${si}-${ei}">
+      <span class="drag-handle" title="Drag to reorder">&#8942;&#8942;</span>
+      <button class="play-btn" ${hasAudio ? '' : 'disabled'} onclick="playEntry('${audioPath}', '${escAttr(entry.display_label)}', '${escAttr(scenario.scenario)}', '${si}-${ei}')">
+        &#9654;
+      </button>
+      <div class="entry-info">
+        <span class="label">${escHtml(entry.display_label)}<button class="edit-label-btn" onclick="event.stopPropagation(); startRename(${si}, ${ei}, this.parentElement)" title="Rename">&#9998;</button></span>
+        <div class="preview" onclick="toggleExpand(${si}, ${ei})" title="Click to expand text">${escHtml(entry.text.substring(0, 120))}...</div>
+      </div>
+      <div class="entry-actions">
+        ${entry.generated_at ? `<button class="icon-btn info-btn" onclick="event.stopPropagation(); toggleInfo(${si}, ${ei})" title="Generation info">&#9432;<div class="info-popover" id="info-${si}-${ei}">Generated: ${escHtml(entry.generated_at)}<br>Model: ${escHtml(entry.generated_model || 'unknown')}</div></button>` : ''}
+        <button class="icon-btn ${hasAudio ? 'regen-btn' : 'gen-btn gen-btn-label'}" id="genbtn-${si}-${ei}" onclick="generateSingleEntry(${si}, ${ei})" title="${hasAudio ? 'Regenerate audio' : 'Generate audio'}">
+          ${hasAudio ? '&#8635;' : '&#9889; Generate audio'}
+        </button>
+        <input type="file" id="attach-${si}-${ei}" accept=".mp3,.wav,.m4a,.ogg" style="display:none" onchange="attachAudioFile(${si}, ${ei}, this)">
+        <button class="icon-btn attach-btn" onclick="event.stopPropagation(); document.getElementById('attach-${si}-${ei}').click()" title="Attach audio file">&#128206;</button>
+        <button class="icon-btn" onclick="toggleExpand(${si}, ${ei})" title="Expand text">&#9776;</button>
+        <button class="icon-btn del-btn" onclick="confirmDeleteEntry(${si}, ${ei}, '${escAttr(entry.display_label)}', '${escAttr(scenario.scenario)}')" title="Delete entry">&#10005;</button>
+      </div>
+    </div>
+    <div class="entry-expanded" id="expanded-${si}-${ei}">
+      <textarea id="text-${si}-${ei}" oninput="updateCharCount(${si}, ${ei})">${escHtml(entry.text)}</textarea>
+      <div class="char-count" id="charcount-${si}-${ei}">${entry.text.length} characters</div>
+      <div class="expand-actions">
+        <button class="btn btn-secondary" onclick="toggleExpand(${si}, ${ei})">Collapse</button>
+        <button class="btn btn-primary" onclick="saveText(${si}, ${ei})">Save Text</button>
+      </div>
+    </div>
+  `;
+  return wrapper;
+}
+
+function getOpenState() {
+  const state = { scenarios: {}, subgroups: {} };
+  document.querySelectorAll('.scenario-header').forEach(h => {
+    const si = h.dataset.si;
+    if (si !== undefined) state.scenarios[si] = h.classList.contains('open');
+  });
+  document.querySelectorAll('.subgroup-header').forEach(h => {
+    const key = `${h.dataset.si}_${h.dataset.subgroup}`;
+    state.subgroups[key] = h.classList.contains('open');
+  });
+  return state;
+}
+
+function renderScenarios() {
+  const openState = getOpenState();
+  const panel = document.getElementById('scenarioPanel');
+  if (!currentCampaignData || currentCampaignData.length === 0) {
+    panel.innerHTML = '<div class="empty">No scenarios found</div>';
+    return;
+  }
+
+  panel.innerHTML = '';
+  currentCampaignData.forEach((scenario, si) => {
+    const group = document.createElement('div');
+    group.className = 'scenario-group';
+
+    const scenarioOpen = openState.scenarios[si] !== undefined ? openState.scenarios[si] : true;
+    const header = document.createElement('div');
+    header.className = 'scenario-header' + (scenarioOpen ? ' open' : '');
+    header.innerHTML = `<span class="arrow">&#9654;</span> <span class="scenario-name">${escHtml(scenario.scenario)}</span><button class="edit-name-btn" title="Rename">&#9998;</button><button class="edit-name-btn add-sg-btn" title="Add subgroup">&#8862;</button><button class="del-campaign-btn" title="Delete group">&#10005;</button>`;
+
+    header.dataset.si = si;
+    header.dataset.subgroup = '__none__';
+    header.addEventListener('dragover', onSubgroupHeaderDragOver);
+    header.addEventListener('dragleave', onDragLeave);
+    header.addEventListener('drop', onSubgroupHeaderDrop);
+
+    header.querySelector('.del-campaign-btn').onclick = (e) => {
+      e.stopPropagation();
+      confirmDeleteScenario(si, scenario.scenario);
+    };
+    header.querySelector('.add-sg-btn').onclick = (e) => {
+      e.stopPropagation();
+      createSubgroup(si);
+    };
+    header.querySelector('.edit-name-btn').onclick = (e) => {
+      e.stopPropagation();
+      startRenameScenario(si, header.querySelector('.scenario-name'));
+    };
+    header.onclick = () => {
+      header.classList.toggle('open');
+      header.nextElementSibling.classList.toggle('open');
+    };
+
+    const entriesContainer = document.createElement('div');
+    entriesContainer.className = 'entry-list' + (scenarioOpen ? ' open' : '');
+
+    // Group entries by subgroup, preserving order
+    const subgroups = new Map(); // name -> [indices]
+    const ungrouped = [];
+    scenario.entries.forEach((entry, ei) => {
+      const sg = entry.subgroup || null;
+      if (sg) {
+        if (!subgroups.has(sg)) subgroups.set(sg, []);
+        subgroups.get(sg).push(ei);
+      } else {
+        ungrouped.push(ei);
+      }
+    });
+
+    // Render ungrouped entries first
+    ungrouped.forEach(ei => {
+      entriesContainer.appendChild(buildEntryWrapper(scenario, si, scenario.entries[ei], ei));
+    });
+
+    // Render each subgroup
+    subgroups.forEach((indices, sgName) => {
+      const section = document.createElement('div');
+      section.className = 'subgroup-section';
+      section.draggable = true;
+      section.dataset.si = si;
+      section.dataset.sgName = sgName;
+
+      section.addEventListener('dragstart', (e) => {
+        if (e.target !== section) return;
+        e.stopPropagation();
+        dragSubgroupData = { si, sgName };
+        section.classList.add('dragging');
+        document.body.classList.add('is-dragging');
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', '');
+      });
+      section.addEventListener('dragend', (e) => {
+        section.classList.remove('dragging');
+        document.body.classList.remove('is-dragging');
+        document.querySelectorAll('.drag-over-section').forEach(el => el.classList.remove('drag-over-section'));
+        dragSubgroupData = null;
+      });
+      section.addEventListener('dragover', (e) => {
+        if (!dragSubgroupData) return;
+        if (dragSubgroupData.si === si && dragSubgroupData.sgName === sgName) return;
+        e.preventDefault();
+        e.stopPropagation();
+        e.dataTransfer.dropEffect = 'move';
+        section.classList.add('drag-over-section');
+      });
+      section.addEventListener('dragleave', (e) => {
+        section.classList.remove('drag-over-section');
+      });
+      section.addEventListener('drop', async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        section.classList.remove('drag-over-section');
+        document.body.classList.remove('is-dragging');
+        if (!dragSubgroupData || (dragSubgroupData.si === si && dragSubgroupData.sgName === sgName)) return;
+        const srcDrag = { ...dragSubgroupData };
+        dragSubgroupData = null;
+        if (srcDrag.si === si) {
+          await fetch(`/api/campaign/${currentCampaignId}/reorder-subgroup`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ scenario_idx: si, subgroup: srcDrag.sgName, target_subgroup: sgName, direction: 'before' }),
+          });
+        } else {
+          await fetch(`/api/campaign/${currentCampaignId}/move-subgroup`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ from_si: srcDrag.si, to_si: si, subgroup: srcDrag.sgName, target_subgroup: sgName }),
+          });
+        }
+        await refreshAndRender();
+      });
+
+      const sgKey = `${si}_${sgName}`;
+      const sgOpen = openState.subgroups[sgKey] !== undefined ? openState.subgroups[sgKey] : false;
+      const sgHeader = document.createElement('div');
+      sgHeader.className = 'subgroup-header' + (sgOpen ? ' open' : '');
+      sgHeader.innerHTML = `<span class="arrow">&#9654;</span> <span class="subgroup-name">${escHtml(sgName)}</span> <span style="opacity:0.5">(${indices.length})</span> <button class="edit-name-btn" title="Rename subgroup">&#9998;</button><button class="del-sg-btn" title="Delete subgroup">&#10005;</button>`;
+
+      sgHeader.dataset.si = si;
+      sgHeader.dataset.subgroup = sgName;
+      sgHeader.addEventListener('dragover', onSubgroupHeaderDragOver);
+      sgHeader.addEventListener('dragleave', onDragLeave);
+      sgHeader.addEventListener('drop', onSubgroupHeaderDrop);
+
+      sgHeader.querySelector('.del-sg-btn').onclick = (e) => {
+        e.stopPropagation();
+        confirmDeleteSubgroup(si, sgName, indices.length);
+      };
+      sgHeader.querySelector('.edit-name-btn').onclick = (e) => {
+        e.stopPropagation();
+        startRenameSubgroup(si, sgName, sgHeader.querySelector('.subgroup-name'));
+      };
+      sgHeader.onclick = () => {
+        sgHeader.classList.toggle('open');
+        sgHeader.nextElementSibling.classList.toggle('open');
+      };
+
+      const sgEntries = document.createElement('div');
+      sgEntries.className = 'subgroup-entries' + (sgOpen ? ' open' : '');
+
+      indices.forEach(ei => {
+        sgEntries.appendChild(buildEntryWrapper(scenario, si, scenario.entries[ei], ei));
+      });
+
+      section.appendChild(sgHeader);
+      section.appendChild(sgEntries);
+      entriesContainer.appendChild(section);
+    });
+
+    group.appendChild(header);
+    group.appendChild(entriesContainer);
+    panel.appendChild(group);
+  });
+}
+
+function startRenameScenario(si, el) {
+  event.stopPropagation();
+  const currentName = currentCampaignData[si].scenario;
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.className = 'scenario-name-edit';
+  input.value = currentName;
+
+  const finish = async () => {
+    const newName = input.value.trim();
+    if (newName && newName !== currentName) {
+      await fetch(`/api/campaign/${currentCampaignId}/scenario`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ scenario_idx: si, scenario: newName }),
+      });
+      currentCampaignData[si].scenario = newName;
+    }
+    const span = document.createElement('span');
+    span.className = 'scenario-name';
+    span.textContent = currentCampaignData[si].scenario;
+    input.replaceWith(span);
+  };
+
+  input.addEventListener('blur', finish);
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); input.blur(); }
+    if (e.key === 'Escape') { input.value = currentName; input.blur(); }
+  });
+  input.onclick = (e) => e.stopPropagation();
+
+  el.replaceWith(input);
+  input.focus();
+  input.select();
+}
+
+function startRename(si, ei, el) {
+  event.stopPropagation();
+  const currentName = currentCampaignData[si].entries[ei].display_label;
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.className = 'label-edit';
+  input.value = currentName;
+
+  const finish = async () => {
+    const newName = input.value.trim();
+    if (newName && newName !== currentName) {
+      await fetch(`/api/campaign/${currentCampaignId}/entry`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ scenario_idx: si, entry_idx: ei, display_label: newName }),
+      });
+      currentCampaignData[si].entries[ei].display_label = newName;
+    }
+    const span = document.createElement('span');
+    span.className = 'label';
+    span.innerHTML = escHtml(currentCampaignData[si].entries[ei].display_label) +
+      `<button class="edit-label-btn" onclick="event.stopPropagation(); startRename(${si}, ${ei}, this.parentElement)" title="Rename">&#9998;</button>`;
+    input.replaceWith(span);
+  };
+
+  input.addEventListener('blur', finish);
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); input.blur(); }
+    if (e.key === 'Escape') { input.value = currentName; input.blur(); }
+  });
+
+  el.replaceWith(input);
+  input.focus();
+  input.select();
+}
+
+// ── Subgroup Management ──
+function startRenameSubgroup(si, oldName, el) {
+  event.stopPropagation();
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.className = 'subgroup-name-edit';
+  input.value = oldName;
+
+  const finish = async () => {
+    const newName = input.value.trim();
+    if (newName && newName !== oldName) {
+      const entries = currentCampaignData[si].entries;
+      const toUpdate = entries.map((e, ei) => e.subgroup === oldName ? ei : null).filter(i => i !== null);
+      for (const ei of toUpdate) {
+        await fetch(`/api/campaign/${currentCampaignId}/entry`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ scenario_idx: si, entry_idx: ei, subgroup: newName }),
+        });
+        entries[ei].subgroup = newName;
+      }
+      renderScenarios();
+    } else {
+      const span = document.createElement('span');
+      span.className = 'subgroup-name';
+      span.textContent = oldName;
+      input.replaceWith(span);
+    }
+  };
+
+  input.addEventListener('blur', finish);
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); input.blur(); }
+    if (e.key === 'Escape') { input.value = oldName; input.blur(); }
+  });
+  input.onclick = (e) => e.stopPropagation();
+
+  el.replaceWith(input);
+  input.focus();
+  input.select();
+}
+
+async function createSubgroup(si) {
+  const name = prompt('Enter subgroup name:');
+  if (!name || !name.trim()) return;
+
+  const entries = currentCampaignData[si].entries;
+  const ungrouped = entries.map((e, ei) => ({ label: e.display_label, ei })).filter(e => !entries[e.ei].subgroup);
+
+  if (ungrouped.length === 0) {
+    alert('All entries are already in subgroups.');
+    return;
+  }
+
+  const choices = ungrouped.map(e => `${e.ei}: ${e.label}`).join('\n');
+  const selected = prompt(`Enter entry numbers to add to "${name.trim()}" (comma-separated):\n\n${choices}`);
+  if (!selected) return;
+
+  const indices = selected.split(',').map(s => parseInt(s.trim())).filter(n => !isNaN(n));
+  for (const ei of indices) {
+    if (ei >= 0 && ei < entries.length) {
+      await fetch(`/api/campaign/${currentCampaignId}/entry`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ scenario_idx: si, entry_idx: ei, subgroup: name.trim() }),
+      });
+      entries[ei].subgroup = name.trim();
+    }
+  }
+  renderScenarios();
+}
+
+// ── Single Entry Generation ──
+async function generateSingleEntry(si, ei) {
+  event.stopPropagation();
+  const btn = document.getElementById(`genbtn-${si}-${ei}`);
+  if (btn.classList.contains('generating')) return;
+
+  btn.classList.add('generating');
+  btn.innerHTML = '&#8987;';
+
+  try {
+    const res = await fetch(`/api/campaign/${currentCampaignId}/generate-entry`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ scenario_idx: si, entry_idx: ei }),
+    });
+    const data = await res.json();
+
+    if (data.error) {
+      alert('Generation failed: ' + data.error);
+      btn.classList.remove('generating');
+      btn.innerHTML = '&#9889;';
+      return;
+    }
+
+    // Refresh campaign data from server to get updated metadata
+    const cRes = await fetch(`/api/campaign/${currentCampaignId}`);
+    currentCampaignData = await cRes.json();
+    renderScenarios();
+    loadLibrary();
+    loadCredits();
+  } catch (e) {
+    alert('Network error: ' + e.message);
+    btn.classList.remove('generating');
+    btn.innerHTML = '&#9889;';
+  }
+}
+
+// ── Attach Audio File ──
+async function attachAudioFile(si, ei, inputEl) {
+  const file = inputEl.files[0];
+  if (!file) return;
+
+  const formData = new FormData();
+  formData.append('audio', file);
+  formData.append('scenario_idx', si);
+  formData.append('entry_idx', ei);
+
+  try {
+    const res = await fetch(`/api/campaign/${currentCampaignId}/attach-audio`, {
+      method: 'POST',
+      body: formData,
+    });
+    const data = await res.json();
+
+    if (data.error) {
+      alert('Upload failed: ' + data.error);
+      inputEl.value = '';
+      return;
+    }
+
+    await refreshAndRender();
+    loadLibrary();
+  } catch (e) {
+    alert('Network error: ' + e.message);
+  }
+  inputEl.value = '';
+}
+
+// ── Drag and Drop ──
+let dragData = null;
+let dragSubgroupData = null;
+
+function onDragStart(e) {
+  const wrapper = e.currentTarget;
+  const si = parseInt(wrapper.dataset.si);
+  const ei = parseInt(wrapper.dataset.ei);
+  dragData = { si, ei, subgroup: currentCampaignData[si].entries[ei].subgroup || null };
+  wrapper.classList.add('dragging');
+  document.body.classList.add('is-dragging');
+  e.dataTransfer.effectAllowed = 'move';
+  e.dataTransfer.setData('text/plain', '');
+}
+
+function onDragEnd(e) {
+  e.currentTarget.classList.remove('dragging');
+  document.body.classList.remove('is-dragging');
+  document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
+  dragData = null;
+}
+
+function onDragOver(e) {
+  e.preventDefault();
+  if (!dragData) return;
+  e.dataTransfer.dropEffect = 'move';
+  e.currentTarget.classList.add('drag-over');
+}
+
+function onDragLeave(e) {
+  e.currentTarget.classList.remove('drag-over');
+}
+
+async function refreshAndRender() {
+  const res = await fetch(`/api/campaign/${currentCampaignId}`);
+  currentCampaignData = await res.json();
+  renderScenarios();
+}
+
+async function onDrop(e) {
+  e.preventDefault();
+  const el = e.currentTarget;
+  el.classList.remove('drag-over');
+  document.body.classList.remove('is-dragging');
+  if (!dragData) return;
+
+  const targetSi = parseInt(el.dataset.si);
+  const targetEi = parseInt(el.dataset.ei);
+  const targetSubgroup = el.dataset.subgroup === '__none__' ? null : (el.dataset.subgroup || null);
+  const sameSi = dragData.si === targetSi;
+  const srcDrag = { ...dragData };
+  dragData = null;
+
+  if (sameSi) {
+    const sourceSubgroup = currentCampaignData[targetSi].entries[srcDrag.ei].subgroup || null;
+    if (srcDrag.ei === targetEi && sourceSubgroup === targetSubgroup) return;
+
+    if (sourceSubgroup !== targetSubgroup) {
+      await fetch(`/api/campaign/${currentCampaignId}/entry`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ scenario_idx: targetSi, entry_idx: srcDrag.ei, subgroup: targetSubgroup || '' }),
+      });
+    }
+    if (!isNaN(targetEi) && srcDrag.ei !== targetEi) {
+      await fetch(`/api/campaign/${currentCampaignId}/reorder`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ scenario_idx: targetSi, from_idx: srcDrag.ei, to_idx: targetEi }),
+      });
+    }
+  } else {
+    await fetch(`/api/campaign/${currentCampaignId}/move-entry`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ from_si: srcDrag.si, from_ei: srcDrag.ei, to_si: targetSi, to_ei: isNaN(targetEi) ? null : targetEi }),
+    });
+    if (targetSubgroup !== null) {
+      // Find the entry's new index after move
+      const freshData = await (await fetch(`/api/campaign/${currentCampaignId}`)).json();
+      const movedEntry = freshData[targetSi].entries.find(
+        e => e.label === currentCampaignData[srcDrag.si].entries[srcDrag.ei]?.label
+      );
+      if (movedEntry) {
+        const newEi = freshData[targetSi].entries.indexOf(movedEntry);
+        await fetch(`/api/campaign/${currentCampaignId}/entry`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ scenario_idx: targetSi, entry_idx: newEi, subgroup: targetSubgroup || '' }),
+        });
+      }
+    }
+  }
+  await refreshAndRender();
+}
+
+function onSubgroupHeaderDragOver(e) {
+  if (!dragData && !dragSubgroupData) return;
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+  e.currentTarget.classList.add('drag-over');
+}
+
+async function onSubgroupHeaderDrop(e) {
+  e.preventDefault();
+  const el = e.currentTarget;
+  el.classList.remove('drag-over');
+  document.body.classList.remove('is-dragging');
+
+  const targetSi = parseInt(el.dataset.si);
+  const targetSubgroup = el.dataset.subgroup === '__none__' ? null : el.dataset.subgroup;
+
+  if (dragSubgroupData) {
+    const srcDrag = { ...dragSubgroupData };
+    dragSubgroupData = null;
+    if (srcDrag.si === targetSi) {
+      if (targetSubgroup === null || srcDrag.sgName === targetSubgroup) return;
+      await fetch(`/api/campaign/${currentCampaignId}/reorder-subgroup`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ scenario_idx: targetSi, subgroup: srcDrag.sgName, target_subgroup: targetSubgroup, direction: 'before' }),
+      });
+    } else {
+      await fetch(`/api/campaign/${currentCampaignId}/move-subgroup`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ from_si: srcDrag.si, to_si: targetSi, subgroup: srcDrag.sgName, target_subgroup: targetSubgroup }),
+      });
+    }
+    await refreshAndRender();
+    return;
+  }
+
+  if (!dragData) return;
+
+  const sameSi = dragData.si === targetSi;
+  const srcDrag = { ...dragData };
+  dragData = null;
+
+  if (sameSi) {
+    const sourceSubgroup = currentCampaignData[targetSi].entries[srcDrag.ei].subgroup || null;
+    if (sourceSubgroup === targetSubgroup) return;
+    await fetch(`/api/campaign/${currentCampaignId}/entry`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ scenario_idx: targetSi, entry_idx: srcDrag.ei, subgroup: targetSubgroup || '' }),
+    });
+  } else {
+    await fetch(`/api/campaign/${currentCampaignId}/move-entry`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ from_si: srcDrag.si, from_ei: srcDrag.ei, to_si: targetSi, to_ei: null }),
+    });
+    if (targetSubgroup !== null) {
+      const freshData = await (await fetch(`/api/campaign/${currentCampaignId}`)).json();
+      const lastEi = freshData[targetSi].entries.length - 1;
+      await fetch(`/api/campaign/${currentCampaignId}/entry`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ scenario_idx: targetSi, entry_idx: lastEi, subgroup: targetSubgroup || '' }),
+      });
+    }
+  }
+  await refreshAndRender();
+}
+
+function toggleInfo(si, ei) {
+  event.stopPropagation();
+  // Close any other open popovers
+  document.querySelectorAll('.info-popover.open').forEach(el => {
+    if (el.id !== `info-${si}-${ei}`) el.classList.remove('open');
+  });
+  const pop = document.getElementById(`info-${si}-${ei}`);
+  if (pop) pop.classList.toggle('open');
+}
+
+// Close info popovers when clicking elsewhere
+document.addEventListener('click', () => {
+  document.querySelectorAll('.info-popover.open').forEach(el => el.classList.remove('open'));
+});
+
+function toggleExpand(si, ei) {
+  event.stopPropagation();
+  const expanded = document.getElementById(`expanded-${si}-${ei}`);
+  expanded.classList.toggle('open');
+}
+
+function updateCharCount(si, ei) {
+  const textarea = document.getElementById(`text-${si}-${ei}`);
+  document.getElementById(`charcount-${si}-${ei}`).textContent = textarea.value.length + ' characters';
+}
+
+async function saveText(si, ei) {
+  const textarea = document.getElementById(`text-${si}-${ei}`);
+  const newText = textarea.value;
+
+  await fetch(`/api/campaign/${currentCampaignId}/entry`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ scenario_idx: si, entry_idx: ei, text: newText }),
+  });
+
+  currentCampaignData[si].entries[ei].text = newText;
+
+  const previewEl = document.querySelector(`#entry-${si}-${ei} .preview`);
+  if (previewEl) previewEl.textContent = newText.substring(0, 120) + '...';
+
+  const charcount = document.getElementById(`charcount-${si}-${ei}`);
+  charcount.textContent = newText.length + ' characters — Saved!';
+  setTimeout(() => { charcount.textContent = newText.length + ' characters'; }, 2000);
+}
+
+function playEntry(audioPath, label, scenario, entryId) {
+  event.stopPropagation();
+
+  if (currentPlayingEntry === entryId) {
+    togglePlayback();
+    return;
+  }
+
+  document.querySelectorAll('.entry-item.playing').forEach(el => el.classList.remove('playing'));
+  document.querySelectorAll('.play-btn.playing-btn').forEach(el => {
+    el.classList.remove('playing-btn');
+    el.innerHTML = '&#9654;';
+  });
+
+  const item = document.getElementById(`entry-${entryId}`);
+  if (item) {
+    item.classList.add('playing');
+    const btn = item.querySelector('.play-btn');
+    btn.classList.add('playing-btn');
+    btn.innerHTML = '&#9646;&#9646;';
+  }
+
+  currentPlayingEntry = entryId;
+
+  audioEl.src = `/audio/${encodeURI(audioPath)}`;
+  audioEl.play();
+
+  document.getElementById('nowPlaying').textContent = label;
+  document.getElementById('nowScenario').textContent = scenario;
+  document.getElementById('playerPlayBtn').disabled = false;
+  document.getElementById('playerPlayBtn').innerHTML = '&#9646;&#9646;';
+}
+
+function togglePlayback() {
+  if (audioEl.paused) {
+    audioEl.play();
+    document.getElementById('playerPlayBtn').innerHTML = '&#9646;&#9646;';
+    _syncEntryPlayBtn('&#9646;&#9646;');
+  } else {
+    audioEl.pause();
+    document.getElementById('playerPlayBtn').innerHTML = '&#9654;';
+    _syncEntryPlayBtn('&#9654;');
+  }
+}
+
+function _syncEntryPlayBtn(icon) {
+  if (!currentPlayingEntry) return;
+  const item = document.getElementById(`entry-${currentPlayingEntry}`);
+  if (item) {
+    const btn = item.querySelector('.play-btn');
+    if (btn) btn.innerHTML = icon;
+  }
+}
+
+function seekAudio(e) {
+  if (!audioEl.duration) return;
+  const bar = document.getElementById('progressBar');
+  const pct = e.offsetX / bar.offsetWidth;
+  audioEl.currentTime = pct * audioEl.duration;
+}
+
+audioEl.addEventListener('timeupdate', () => {
+  if (!audioEl.duration) return;
+  const pct = (audioEl.currentTime / audioEl.duration) * 100;
+  document.getElementById('progressFill').style.width = pct + '%';
+  document.getElementById('timeDisplay').textContent =
+    `${fmtTime(audioEl.currentTime)} / ${fmtTime(audioEl.duration)}`;
+});
+
+audioEl.addEventListener('ended', () => {
+  document.getElementById('playerPlayBtn').innerHTML = '&#9654;';
+  document.querySelectorAll('.play-btn.playing-btn').forEach(el => {
+    el.classList.remove('playing-btn');
+    el.innerHTML = '&#9654;';
+  });
+  document.querySelectorAll('.entry-item.playing').forEach(el => el.classList.remove('playing'));
+  currentPlayingEntry = null;
+});
+
+function fmtTime(s) {
+  const m = Math.floor(s / 60);
+  const sec = Math.floor(s % 60);
+  return `${m}:${sec.toString().padStart(2, '0')}`;
+}
+
+// ── Import ──
+async function extractPdf() {
+  const fileInput = document.getElementById('pdfFile');
+  const nameInput = document.getElementById('campaignName');
+  const status = document.getElementById('extractStatus');
+
+  if (!fileInput.files.length) {
+    status.textContent = 'Please select a PDF file.';
+    status.className = 'status-msg error';
+    return;
+  }
+
+  const btn = document.getElementById('extractBtn');
+  btn.disabled = true;
+  status.textContent = 'Extracting sections...';
+  status.className = 'status-msg';
+
+  const formData = new FormData();
+  formData.append('pdf', fileInput.files[0]);
+  formData.append('campaign_name', nameInput.value);
+
+  try {
+    const res = await fetch('/api/extract', { method: 'POST', body: formData });
+    const data = await res.json();
+    if (data.error) {
+      status.textContent = data.error;
+      status.className = 'status-msg error';
+    } else {
+      status.textContent = `Extracted ${data.entries} entries across ${data.scenarios} scenarios.`;
+      status.className = 'status-msg success';
+      loadLibrary();
+      refreshCampaignSelect();
+    }
+  } catch (e) {
+    status.textContent = 'Network error: ' + e.message;
+    status.className = 'status-msg error';
+  }
+
+  btn.disabled = false;
+}
+
+async function refreshCampaignSelect() {
+  const res = await fetch('/api/library');
+  const campaigns = await res.json();
+
+  ['genCampaign', 'arkhamdbCampaign'].forEach(selId => {
+    const sel = document.getElementById(selId);
+    if (!sel) return;
+    sel.innerHTML = '<option value="">-- Select campaign --</option>';
+    campaigns.forEach(c => {
+      const opt = document.createElement('option');
+      opt.value = c.id;
+      opt.textContent = `${c.full_name} (${c.generated_entries}/${c.total_entries} generated)`;
+      sel.appendChild(opt);
+    });
+  });
+}
+
+async function loadArkhamDBPacks() {
+  const sel = document.getElementById('arkhamdbPack');
+  if (sel.dataset.loaded) return;
+  sel.innerHTML = '<option value="">Loading packs...</option>';
+  try {
+    const res = await fetch('/api/arkhamdb/packs');
+    const packs = await res.json();
+    if (packs.error) throw new Error(packs.error);
+    sel.innerHTML = '';
+
+    // Group by cycle
+    const groups = new Map();
+    packs.forEach(p => {
+      const cycle = p.cycle || 'Other';
+      if (!groups.has(cycle)) groups.set(cycle, []);
+      groups.get(cycle).push(p);
+    });
+
+    // Sort cycles by cycle_position
+    const sorted = [...groups.entries()].sort((a, b) => {
+      const posA = a[1][0]?.cycle_position || 99;
+      const posB = b[1][0]?.cycle_position || 99;
+      return posA - posB;
+    });
+
+    sorted.forEach(([cycleName, cyclePacks]) => {
+      const group = document.createElement('optgroup');
+      group.label = cycleName;
+      cyclePacks.forEach(p => {
+        const opt = document.createElement('option');
+        opt.value = p.code;
+        opt.textContent = p.name;
+        group.appendChild(opt);
+      });
+      sel.appendChild(group);
+    });
+
+    sel.dataset.loaded = 'true';
+  } catch (e) {
+    sel.innerHTML = '<option value="">Failed to load packs</option>';
+  }
+}
+
+async function importFromArkhamDB() {
+  const campaignId = document.getElementById('arkhamdbCampaign').value;
+  const sel = document.getElementById('arkhamdbPack');
+  const packCodes = Array.from(sel.selectedOptions).map(o => o.value).filter(v => v);
+  const status = document.getElementById('arkhamdbStatus');
+
+  if (!campaignId) {
+    status.textContent = 'Select a campaign first.';
+    status.className = 'status-msg error';
+    return;
+  }
+  if (packCodes.length === 0) {
+    status.textContent = 'Select at least one pack.';
+    status.className = 'status-msg error';
+    return;
+  }
+
+  const btn = document.getElementById('arkhamdbBtn');
+  btn.disabled = true;
+  status.textContent = `Fetching cards from ${packCodes.length} pack(s)...`;
+  status.className = 'status-msg';
+
+  let totalAdded = 0;
+  let totalCards = 0;
+  let totalSkipped = 0;
+  let errors = [];
+
+  for (const packCode of packCodes) {
+    try {
+      const res = await fetch(`/api/arkhamdb/import/${campaignId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pack_code: packCode }),
+      });
+      const data = await res.json();
+      if (data.error) {
+        errors.push(`${packCode}: ${data.error}`);
+      } else {
+        totalAdded += data.added;
+        totalCards += data.cards;
+        totalSkipped += data.skipped || 0;
+      }
+      status.textContent = `Processing... ${totalAdded} entries imported so far`;
+    } catch (e) {
+      errors.push(`${packCode}: ${e.message}`);
+    }
+  }
+
+  if (errors.length > 0) {
+    status.textContent = `Imported ${totalAdded} entries from ${totalCards} cards. Errors: ${errors.join('; ')}`;
+    status.className = 'status-msg error';
+  } else {
+    status.textContent = `Imported ${totalAdded} entries from ${totalCards} agenda/act cards across ${packCodes.length} pack(s).` + (totalSkipped ? ` ${totalSkipped} duplicates skipped.` : '');
+    status.className = 'status-msg success';
+  }
+
+  loadLibrary();
+  refreshCampaignSelect();
+  if (currentCampaignId === campaignId) {
+    const cRes = await fetch(`/api/campaign/${campaignId}`);
+    currentCampaignData = await cRes.json();
+    renderScenarios();
+  }
+  btn.disabled = false;
+}
+
+async function generateAudio() {
+  const campaignId = document.getElementById('genCampaign').value;
+  if (!campaignId) {
+    document.getElementById('genStatus').textContent = 'Select a campaign first.';
+    document.getElementById('genStatus').className = 'status-msg error';
+    return;
+  }
+
+  const settings = await (await fetch('/api/settings')).json();
+  if (!settings.api_key) {
+    document.getElementById('genStatus').textContent = 'Set your API key in Settings first.';
+    document.getElementById('genStatus').className = 'status-msg error';
+    return;
+  }
+  if (!settings.voice_id) {
+    document.getElementById('genStatus').textContent = 'Set a voice ID in Settings first.';
+    document.getElementById('genStatus').className = 'status-msg error';
+    return;
+  }
+
+  const btn = document.getElementById('generateBtn');
+  btn.disabled = true;
+
+  const progress = document.getElementById('genProgress');
+  progress.style.display = 'block';
+
+  const res = await fetch(`/api/generate/${campaignId}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({}),
+  });
+  const data = await res.json();
+
+  if (data.error) {
+    document.getElementById('genStatus').textContent = data.error;
+    document.getElementById('genStatus').className = 'status-msg error';
+    btn.disabled = false;
+    return;
+  }
+
+  const jobId = data.job_id;
+  const poll = setInterval(async () => {
+    const sRes = await fetch(`/api/generate/status/${jobId}`);
+    const job = await sRes.json();
+    const pct = job.total > 0 ? (job.completed / job.total) * 100 : 0;
+    document.getElementById('genProgressFill').style.width = pct + '%';
+    document.getElementById('genStatus').textContent =
+      `${job.completed}/${job.total} generated` + (job.current ? ` — ${job.current}` : '') +
+      (job.errors > 0 ? ` (${job.errors} errors)` : '');
+    document.getElementById('genStatus').className = 'status-msg';
+
+    if (job.status === 'complete') {
+      clearInterval(poll);
+      document.getElementById('genStatus').textContent =
+        `Complete! ${job.completed}/${job.total} files generated.` +
+        (job.errors > 0 ? ` ${job.errors} errors.` : '');
+      document.getElementById('genStatus').className = 'status-msg success';
+      btn.disabled = false;
+      loadLibrary();
+      refreshCampaignSelect();
+      loadCredits();
+    }
+  }, 2000);
+}
+
+// ── Settings ──
+async function loadSettings() {
+  const res = await fetch('/api/settings');
+  const s = await res.json();
+  document.getElementById('settingsApiKey').value = s.api_key || '';
+  document.getElementById('settingsVoiceId').value = s.voice_id || '';
+  document.getElementById('settingsModel').value = s.model_id || 'eleven_v4';
+}
+
+async function saveSettings() {
+  const apiKey = document.getElementById('settingsApiKey').value.trim();
+  const voiceId = document.getElementById('settingsVoiceId').value.trim();
+  const modelId = document.getElementById('settingsModel').value;
+
+  await fetch('/api/settings', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ api_key: apiKey, voice_id: voiceId, model_id: modelId }),
+  });
+
+  document.getElementById('settingsStatus').textContent = 'Settings saved.';
+  document.getElementById('settingsStatus').className = 'status-msg success';
+  setTimeout(() => {
+    document.getElementById('settingsStatus').textContent = '';
+  }, 3000);
+}
+
+// ── Delete / Confirmation Modal ──
+let pendingAction = null;
+
+function showModal(title, message, onConfirm, showKeepAudio = false) {
+  document.getElementById('confirmTitle').textContent = title;
+  document.getElementById('confirmMessage').textContent = message;
+  const keepLabel = document.getElementById('keepAudioLabel');
+  const keepCheckbox = document.getElementById('keepAudioCheckbox');
+  if (showKeepAudio) {
+    keepLabel.classList.add('visible');
+    keepCheckbox.checked = true;
+  } else {
+    keepLabel.classList.remove('visible');
+  }
+  document.getElementById('confirmModal').classList.add('open');
+  pendingAction = onConfirm;
+}
+
+function closeModal() {
+  document.getElementById('confirmModal').classList.remove('open');
+  document.getElementById('keepAudioLabel').classList.remove('visible');
+  pendingAction = null;
+}
+
+function confirmAction() {
+  if (pendingAction) {
+    const keepAudio = document.getElementById('keepAudioCheckbox').checked;
+    pendingAction(keepAudio);
+  }
+  closeModal();
+}
+
+function confirmDeleteCampaign(campaignId, campaignName) {
+  showModal(
+    'Delete Campaign',
+    `Are you sure you want to delete "${campaignName}"? This will remove all extracted data. This cannot be undone.`,
+    async (keepAudio) => {
+      await fetch(`/api/campaign/${campaignId}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ keep_audio: keepAudio }),
+      });
+      if (currentCampaignId === campaignId) {
+        currentCampaignId = null;
+        currentCampaignData = null;
+        document.getElementById('scenarioPanel').innerHTML = '<div class="empty">Select a campaign to browse audio</div>';
+      }
+      loadLibrary();
+    },
+    true
+  );
+}
+
+function confirmDeleteSubgroup(si, sgName, entryCount) {
+  event.stopPropagation();
+  showModal(
+    'Delete Subgroup',
+    `Are you sure you want to delete "${sgName}" and all its ${entryCount} entries? This cannot be undone.`,
+    async (keepAudio) => {
+      await fetch(`/api/campaign/${currentCampaignId}/subgroup`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ scenario_idx: si, subgroup: sgName, keep_audio: keepAudio }),
+      });
+      await refreshAndRender();
+      loadLibrary();
+    },
+    true
+  );
+}
+
+function confirmDeleteScenario(si, scenarioName) {
+  event.stopPropagation();
+  const entryCount = currentCampaignData[si].entries.length;
+  showModal(
+    'Delete Group',
+    `Are you sure you want to delete "${scenarioName}" and all its ${entryCount} entries? This cannot be undone.`,
+    async (keepAudio) => {
+      await fetch(`/api/campaign/${currentCampaignId}/scenario`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ scenario_idx: si, keep_audio: keepAudio }),
+      });
+      const res = await fetch(`/api/campaign/${currentCampaignId}`);
+      currentCampaignData = await res.json();
+      renderScenarios();
+      loadLibrary();
+    },
+    true
+  );
+}
+
+function confirmDeleteEntry(si, ei, entryLabel, scenarioName) {
+  event.stopPropagation();
+  showModal(
+    'Delete Entry',
+    `Are you sure you want to delete "${entryLabel}" from "${scenarioName}"?`,
+    async (keepAudio) => {
+      await fetch(`/api/campaign/${currentCampaignId}/entry`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ scenario_idx: si, entry_idx: ei, keep_audio: keepAudio }),
+      });
+      const res = await fetch(`/api/campaign/${currentCampaignId}`);
+      currentCampaignData = await res.json();
+      renderScenarios();
+      loadLibrary();
+    },
+    true
+  );
+}
+
+// Close modal on overlay click
+document.getElementById('confirmModal').addEventListener('click', (e) => {
+  if (e.target === e.currentTarget) closeModal();
+});
+
+// Close modal on Escape key
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && document.getElementById('confirmModal').classList.contains('open')) {
+    closeModal();
+  }
+});
+
+// ── Utils ──
+function escHtml(s) {
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+function escAttr(s) {
+  return s.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+}
+
+// ── Credits ──
+async function loadCredits() {
+  try {
+    const res = await fetch('/api/credits');
+    const data = await res.json();
+    if (data.error) {
+      document.getElementById('creditsText').textContent = 'N/A';
+      return;
+    }
+    const remaining = data.remaining;
+    const limit = data.character_limit;
+    const pct = limit > 0 ? (remaining / limit) * 100 : 0;
+    const fill = document.getElementById('creditsFill');
+    fill.style.width = pct + '%';
+    fill.className = 'credits-fill ' + (pct > 50 ? 'high' : pct > 20 ? 'medium' : 'low');
+    document.getElementById('creditsText').textContent = `${remaining.toLocaleString()} chars left`;
+    document.getElementById('creditsIndicator').title = `${data.tier} plan: ${data.character_count.toLocaleString()} / ${limit.toLocaleString()} characters used`;
+  } catch (e) {
+    document.getElementById('creditsText').textContent = 'N/A';
+  }
+}
+
+// ── Init ──
+loadLibrary();
+loadCredits();
+setInterval(loadCredits, 60000);
+</script>
+</body>
+</html>
