@@ -42,26 +42,13 @@ pip install -r requirements.txt
 
 ### Running
 
-**Linux / macOS:**
-
 ```bash
 python app.py
 ```
 
 Open **http://localhost:5000** in your browser.
 
-**Windows:**
-
-Double-click `run.bat` -- it installs dependencies and starts the app automatically.
-
-Or from the command prompt:
-
-```cmd
-pip install -r requirements.txt
-python app.py
-```
-
-If `python` isn't recognized, you may need to install Python from [python.org](https://www.python.org/downloads/) and make sure "Add Python to PATH" is checked during installation.
+On Windows, you can also double-click `run.bat` to install dependencies and start the app in one step.
 
 ### Configuration
 
