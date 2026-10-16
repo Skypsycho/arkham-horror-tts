@@ -51,7 +51,9 @@ CLAUDE.md               - This file (project context for Claude Code)
 
 ### Web App (`app.py`)
 - Campaign data stored as JSON arrays of scenario objects in `data/`
+- Campaign metadata (display names, sort order) stored in `data/_campaign_meta.json`
 - Files starting with `_` in data/ are skipped (cache files); non-list JSON also skipped
+- FFG campaign guide catalog (`FFG_CAMPAIGN_GUIDES`): auto-download PDFs from Fantasy Flight Games CDN via `/api/ffg-download`
 - Audio organized as `audio/<Campaign Name>/<Scenario Name>/<[Subgroup - ]Display Label>.<ext>` (human-readable paths)
 - Legacy audio paths (`audio/<campaign_id>/<scenario_folder>/<label>.mp3`) auto-migrated on first load
 - Each entry stores `audio_file` field with relative path from audio dir (supports mp3/wav/m4a/ogg)
@@ -66,18 +68,18 @@ CLAUDE.md               - This file (project context for Claude Code)
 
 ### Frontend (`templates/index.html`)
 - Three tabs: Library, Import, Settings
-- **Library tab**: campaign sidebar, scenario groups with collapsible subgroups, entry cards with inline audio player
-- **Entries**: play button, drag handle, rename (pencil icon), expand text, generate/regenerate audio, attach audio file (paperclip icon), info popover (timestamp + model), delete
+- **Library tab**: campaign sidebar (renameable, reorderable via drag-and-drop), scenario groups with collapsible subgroups, entry cards with inline audio player
+- **Campaigns**: renameable (pencil icon), drag-and-drop reordering, deleteable; display names and order stored in `_campaign_meta.json`
+- **Entries**: play/pause toggle button, drag handle, rename (pencil icon), expand/edit text (auto-saves on collapse or click-away), generate/regenerate audio, attach audio file (paperclip icon), info popover (timestamp + model), delete
 - **Subgroups**: collapsible (collapsed by default), renameable, deleteable, draggable for reordering within and across scenarios
-- **Groups (scenarios)**: renameable, deleteable, add-subgroup button — all action icons appear on hover only
-- **Drag-and-drop**: entries within/across scenarios and subgroups; subgroup reordering within and across scenarios; entries onto scenario/subgroup headers
-- **Play/pause toggle**: entry play buttons swap to pause icon while playing; clicking again pauses; synced with bottom player bar
-  - During drag, `body.is-dragging` class disables `pointer-events` on child elements so drag events reach wrapper/header targets
+- **Groups (scenarios)**: renameable, deleteable, draggable for reordering, add-subgroup button — all action icons appear on hover only
+- **Drag-and-drop**: entries within/across scenarios and subgroups; subgroup reordering within and across scenarios; scenario reordering; campaign reordering; entries onto scenario/subgroup headers
+  - During drag, `body.is-dragging` / `body.is-dragging-scenario` classes disable `pointer-events` on child elements so drag events reach wrapper/header targets
   - After any drop, `is-dragging` cleared and `dragData` nulled BEFORE re-render
   - After mutations, data re-fetched from server (`refreshAndRender()`) — no local state manipulation
 - Open/collapsed state of scenarios and subgroups preserved across re-renders via `getOpenState()`
 - **Audio player bar**: fixed at bottom, shows current track, progress bar with seek, play/pause
-- **Import tab**: PDF upload + extract, bulk audio generation with progress bar, ArkhamDB card import
+- **Import tab**: FFG campaign guide download (auto-downloads from FFG CDN) or manual PDF upload, bulk audio generation with progress bar, ArkhamDB card import
 - **ArkhamDB import**: multi-select pack list grouped by campaign cycle (`<optgroup>`), packs cached locally with background refresh
 - **Settings tab**: API key, voice ID, TTS model dropdown, save button
 - **Credits indicator**: in header, shows remaining characters with color-coded bar, refreshes every 60s and after generation
@@ -104,8 +106,12 @@ python app.py
 On Windows: double-click `run.bat`
 
 ## API Endpoints
-- `GET /api/library` - List all campaigns with entry/audio counts
+- `GET /api/library` - List all campaigns with entry/audio counts (respects custom names/order)
 - `GET /api/campaign/<id>` - Get campaign data with audio status per entry
+- `POST /api/campaign/<id>/rename` - Rename campaign display name
+- `POST /api/reorder-campaigns` - Set campaign display order
+- `GET /api/ffg-campaigns` - List available FFG campaign guide PDFs
+- `POST /api/ffg-download` - Download FFG campaign guide PDF and extract sections
 - `POST /api/extract` - Upload PDF and extract sections (multipart form)
 - `POST /api/generate/<id>` - Bulk generate audio (background job, returns job_id)
 - `GET /api/generate/status/<job_id>` - Poll bulk generation progress
@@ -119,6 +125,7 @@ On Windows: double-click `run.bat`
 - `DELETE /api/campaign/<id>/subgroup` - Delete subgroup and entries (optional `keep_audio` flag)
 - `POST /api/campaign/<id>/reorder` - Reorder entry within scenario
 - `POST /api/campaign/<id>/move-entry` - Move entry between scenarios
+- `POST /api/campaign/<id>/reorder-scenario` - Reorder scenarios within campaign
 - `POST /api/campaign/<id>/reorder-subgroup` - Reorder subgroups within scenario
 - `POST /api/campaign/<id>/move-subgroup` - Move subgroup between scenarios
 - `DELETE /api/campaign/<id>` - Delete entire campaign and audio (optional `keep_audio` flag)

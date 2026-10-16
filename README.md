@@ -6,13 +6,14 @@ Browse, organize, and play generated audio from a library interface — or attac
 
 ## Features
 
+- **FFG Campaign Download** -- Download any official campaign guide PDF directly from Fantasy Flight Games with one click
 - **PDF Extraction** -- Upload a campaign guide PDF and automatically extract all read-aloud narrative sections, grouped by scenario
 - **Text-to-Speech** -- Generate audio for any entry using ElevenLabs TTS with configurable voice and model
 - **Audio Library** -- Browse campaigns, scenarios, and entries with collapsible groups and subgroups
 - **Inline Playback** -- Play/pause audio directly from entry cards or the persistent player bar
 - **Audio Recycling** -- Keep audio files on disk when deleting entries, then re-attach them to other entries
 - **File Attachment** -- Upload your own audio files (MP3, WAV, M4A, OGG) to any entry instead of generating via TTS
-- **Drag-and-Drop** -- Reorder entries, move them between scenarios, and drag subgroups across groups
+- **Drag-and-Drop** -- Reorder campaigns, scenarios, entries, and subgroups — move items within or across groups
 - **ArkhamDB Import** -- Fetch agenda/act card flavor text from ArkhamDB and add it to your campaigns
 - **Human-Readable File Names** -- Audio files stored with descriptive paths like `The Dunwich Legacy/Scenario I/Resolutions - Resolution 1.mp3`
 
@@ -59,10 +60,10 @@ Go to the **Settings** tab in the app to enter your:
 
 ## Usage
 
-1. **Import** -- Go to the Import tab, upload a campaign guide PDF, and click "Extract Sections"
+1. **Import** -- Go to the Import tab, select a campaign from the FFG list and click "Download & Extract", or upload your own PDF
 2. **Browse** -- Switch to the Library tab to see your extracted scenarios and entries
 3. **Generate** -- Click the lightning bolt on any entry to generate audio, or use bulk generation
-4. **Organize** -- Drag entries and subgroups to reorder, rename labels, edit text before generating
+4. **Organize** -- Rename campaigns/scenarios/entries, drag to reorder, edit text (auto-saves on collapse)
 5. **Play** -- Click the play button on any entry or use the bottom player bar
 
 ### Audio Recycling

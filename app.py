@@ -109,7 +109,23 @@ def _save_settings(settings):
         json.dump(settings, f, indent=2)
 
 
+CAMPAIGN_META_FILE = DATA_DIR / "_campaign_meta.json"
+
+
+def _load_campaign_meta():
+    if CAMPAIGN_META_FILE.exists():
+        with open(CAMPAIGN_META_FILE) as f:
+            return json.load(f)
+    return {}
+
+
+def _save_campaign_meta(meta):
+    with open(CAMPAIGN_META_FILE, "w") as f:
+        json.dump(meta, f, indent=2)
+
+
 def _get_campaigns():
+    meta = _load_campaign_meta()
     campaigns = []
     for path in sorted(DATA_DIR.glob("*.json")):
         if path.name.startswith("_"):
@@ -131,7 +147,8 @@ def _get_campaigns():
                 if entry["has_audio"]:
                     generated += 1
 
-        display_name = campaign_id.replace("_", " ").title()
+        cm = meta.get(campaign_id, {})
+        display_name = cm.get("name", campaign_id.replace("_", " ").title())
 
         campaigns.append({
             "id": campaign_id,
@@ -141,6 +158,12 @@ def _get_campaigns():
             "total_entries": total,
             "generated_entries": generated,
         })
+
+    order = meta.get("_order", [])
+    if order:
+        order_map = {cid: i for i, cid in enumerate(order)}
+        campaigns.sort(key=lambda c: order_map.get(c["id"], 9999))
+
     return campaigns
 
 
@@ -152,6 +175,102 @@ def index():
 @app.route("/api/library")
 def api_library():
     return jsonify(_get_campaigns())
+
+
+@app.route("/api/campaign/<campaign_id>/rename", methods=["POST"])
+def api_rename_campaign(campaign_id):
+    path = DATA_DIR / f"{campaign_id}.json"
+    if not path.exists():
+        return jsonify({"error": "Campaign not found"}), 404
+
+    body = request.json
+    new_name = body.get("name", "").strip()
+    if not new_name:
+        return jsonify({"error": "Name required"}), 400
+
+    meta = _load_campaign_meta()
+    if campaign_id not in meta:
+        meta[campaign_id] = {}
+    meta[campaign_id]["name"] = new_name
+    _save_campaign_meta(meta)
+    return jsonify({"ok": True})
+
+
+@app.route("/api/reorder-campaigns", methods=["POST"])
+def api_reorder_campaigns():
+    body = request.json
+    order = body.get("order", [])
+    meta = _load_campaign_meta()
+    meta["_order"] = order
+    _save_campaign_meta(meta)
+    return jsonify({"ok": True})
+
+
+FFG_CAMPAIGN_GUIDES = [
+    {"name": "Night of the Zealot", "url": "https://cdn.svc.asmodee.net/production-fantasyflightgames/uploads/2026/09/night_of_the_zealot_campaign_guide.pdf"},
+    {"name": "The Dunwich Legacy", "url": "https://cdn.svc.asmodee.net/production-fantasyflightgames/uploads/2026/09/ahc66_campaign_guide_v6-compressed.pdf"},
+    {"name": "The Path to Carcosa", "url": "https://cdn.svc.asmodee.net/production-fantasyflightgames/uploads/2026/09/ahc68_campaign_guide_v4-compressed.pdf"},
+    {"name": "The Forgotten Age", "url": "https://cdn.svc.asmodee.net/production-fantasyflightgames/uploads/2026/09/ahc73_campaign_guide_v2-compressed.pdf"},
+    {"name": "The Circle Undone", "url": "https://cdn.svc.asmodee.net/production-fantasyflightgames/uploads/2026/09/ahc75_campaign_guide-compressed.pdf"},
+    {"name": "The Dream-Eaters (Campaign A)", "url": "https://cdn.svc.asmodee.net/production-fantasyflightgames/uploads/2026/09/ahc79_campaign_guide_a-web.pdf"},
+    {"name": "The Dream-Eaters (Campaign B)", "url": "https://cdn.svc.asmodee.net/production-fantasyflightgames/uploads/2026/09/ahc79_campaign_guide_b-web.pdf"},
+    {"name": "The Innsmouth Conspiracy", "url": "https://cdn.svc.asmodee.net/production-fantasyflightgames/uploads/2026/09/ahc82_campaign_guide-web_1.pdf"},
+    {"name": "Edge of the Earth", "url": "https://cdn.svc.asmodee.net/production-fantasyflightgames/uploads/2026/09/ahc64_edge_of_the_earth_campaign_guide-compressed.pdf"},
+    {"name": "The Scarlet Keys", "url": "https://cdn.svc.asmodee.net/production-fantasyflightgames/uploads/2026/09/ahc70_the_scarlet_keys_campaign_guide-compressed.pdf"},
+    {"name": "The Feast of Hemlock Vale", "url": "https://cdn.svc.asmodee.net/production-fantasyflightgames/uploads/2026/09/ahc77_campaign_guide_web-compressed.pdf"},
+    {"name": "The Drowned City", "url": "https://cdn.svc.asmodee.net/production-fantasyflightgames/uploads/2026/09/ahc84_campaign_guide-web_1.pdf"},
+    {"name": "Brethren of Ash", "url": "https://cdn.svc.asmodee.net/production-fantasyflightgames/uploads/2026/09/ahc100_campaign_guide-web.pdf"},
+    {"name": "Children of Blood", "url": "https://cdn.svc.asmodee.net/production-fantasyflightgames/uploads/2026/09/ahc106_campaign_guide-web.pdf"},
+]
+
+
+@app.route("/api/ffg-campaigns")
+def api_ffg_campaigns():
+    return jsonify(FFG_CAMPAIGN_GUIDES)
+
+
+@app.route("/api/ffg-download", methods=["POST"])
+def api_ffg_download():
+    body = request.json
+    campaign_name = body.get("name")
+    url = body.get("url")
+
+    guide = next((g for g in FFG_CAMPAIGN_GUIDES if g["url"] == url), None)
+    if not guide:
+        return jsonify({"error": "Unknown campaign guide URL"}), 400
+
+    campaign_id = re.sub(r"[^\w\s\-]", "", campaign_name)
+    campaign_id = re.sub(r"\s+", "_", campaign_id).lower()[:60]
+
+    filename = url.rsplit("/", 1)[-1]
+    pdf_path = BASE_DIR / "uploads" / filename
+    pdf_path.parent.mkdir(exist_ok=True)
+
+    if not pdf_path.exists():
+        import urllib.request
+        try:
+            req = urllib.request.Request(url, headers={"User-Agent": "ArkhamTTS/1.0"})
+            with urllib.request.urlopen(req, timeout=120) as r:
+                with open(pdf_path, "wb") as f:
+                    f.write(r.read())
+        except Exception as e:
+            return jsonify({"error": f"Download failed: {e}"}), 500
+
+    try:
+        sections = extract_sections(str(pdf_path))
+    except Exception as e:
+        return jsonify({"error": f"Extraction failed: {e}"}), 500
+
+    output_path = DATA_DIR / f"{campaign_id}.json"
+    with open(output_path, "w", encoding="utf-8") as f:
+        json.dump(sections, f, indent=2, ensure_ascii=False)
+
+    total = sum(len(s["entries"]) for s in sections)
+    return jsonify({
+        "campaign_id": campaign_id,
+        "scenarios": len(sections),
+        "entries": total,
+    })
 
 
 @app.route("/api/extract", methods=["POST"])
@@ -207,6 +326,32 @@ def api_campaign(campaign_id):
             entry["has_audio"] = audio_path.exists()
 
     return jsonify(data)
+
+
+@app.route("/api/campaign/<campaign_id>/reorder-scenario", methods=["POST"])
+def api_reorder_scenario(campaign_id):
+    path = DATA_DIR / f"{campaign_id}.json"
+    if not path.exists():
+        return jsonify({"error": "Campaign not found"}), 404
+
+    body = request.json
+    from_idx = body.get("from_idx")
+    to_idx = body.get("to_idx")
+
+    with open(path) as f:
+        data = json.load(f)
+
+    if (from_idx is None or to_idx is None
+            or from_idx >= len(data) or to_idx >= len(data)):
+        return jsonify({"error": "Invalid indices"}), 400
+
+    scenario = data.pop(from_idx)
+    data.insert(to_idx, scenario)
+
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2, ensure_ascii=False)
+
+    return jsonify({"ok": True})
 
 
 @app.route("/api/campaign/<campaign_id>", methods=["PUT"])

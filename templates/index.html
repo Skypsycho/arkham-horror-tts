@@ -159,6 +159,27 @@ header h1 {
 .campaign-item:hover .del-campaign-btn { display: flex; }
 .campaign-item .del-campaign-btn:hover { background: var(--danger); color: #fff; }
 
+.campaign-item .rename-campaign-btn {
+  width: 24px;
+  height: 24px;
+  border: none;
+  background: transparent;
+  color: var(--text2);
+  cursor: pointer;
+  border-radius: 4px;
+  font-size: 12px;
+  flex-shrink: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+}
+
+.campaign-item:hover .rename-campaign-btn { display: flex; }
+.campaign-item .rename-campaign-btn:hover { color: var(--accent); }
+
+.campaign-item.dragging { opacity: 0.4; }
+.campaign-item.drag-over-campaign { border-top: 2px solid var(--accent); }
+
 .campaign-item .meta {
   font-size: 12px;
   color: var(--text2);
@@ -198,6 +219,9 @@ header h1 {
 
 .scenario-header:hover { background: var(--surface2); }
 .scenario-header.drag-over { background: var(--bg3); border-bottom: 2px solid var(--accent); }
+.scenario-group.dragging { opacity: 0.4; }
+.scenario-group.drag-over-group { border-top: 2px solid var(--accent); }
+body.is-dragging-scenario .scenario-group > * { pointer-events: none; }
 .scenario-header .arrow { transition: transform 0.2s; font-size: 10px; }
 .scenario-header.open .arrow { transform: rotate(90deg); }
 
@@ -655,6 +679,30 @@ body.is-dragging .scenario-header > * { pointer-events: none; }
   gap: 8px;
 }
 
+.import-mode-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 16px;
+  background: var(--bg);
+  border-radius: 6px;
+  padding: 3px;
+}
+
+.import-mode-tab {
+  flex: 1;
+  padding: 8px 16px;
+  border: none;
+  background: transparent;
+  color: var(--text2);
+  cursor: pointer;
+  border-radius: 4px;
+  font-size: 13px;
+  transition: all 0.2s;
+}
+
+.import-mode-tab:hover { color: var(--text); background: var(--surface); }
+.import-mode-tab.active { background: var(--bg3); color: var(--accent); }
+
 .step-num {
   width: 24px;
   height: 24px;
@@ -854,21 +902,39 @@ input:focus { outline: none; border-color: var(--accent); }
   <!-- Import Tab -->
   <div id="import-tab" class="tab-content">
     <div class="import-section">
-      <h2><span class="step-num">1</span> Select Campaign PDF</h2>
-      <div class="form-row">
-        <div class="form-group">
-          <label>Campaign Name (optional)</label>
-          <input type="text" id="campaignName" placeholder="e.g. The Dunwich Legacy">
-        </div>
+      <h2><span class="step-num">1</span> Import Campaign Guide</h2>
+      <div class="import-mode-tabs">
+        <button class="import-mode-tab active" onclick="switchImportMode('ffg')">Download from FFG</button>
+        <button class="import-mode-tab" onclick="switchImportMode('manual')">Upload PDF</button>
       </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label>PDF File</label>
-          <input type="file" id="pdfFile" accept=".pdf">
+      <div id="ffgImportMode">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Campaign</label>
+            <select id="ffgCampaign" style="width:100%;padding:8px 12px;background:var(--bg);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:14px;">
+              <option value="">-- Select campaign --</option>
+            </select>
+          </div>
+          <button class="btn btn-primary" id="ffgDownloadBtn" onclick="downloadFromFFG()">Download &amp; Extract</button>
         </div>
-        <button class="btn btn-primary" id="extractBtn" onclick="extractPdf()">Extract Sections</button>
+        <div class="status-msg" id="ffgStatus"></div>
       </div>
-      <div class="status-msg" id="extractStatus"></div>
+      <div id="manualImportMode" style="display:none">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Campaign Name (optional)</label>
+            <input type="text" id="campaignName" placeholder="e.g. The Dunwich Legacy">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>PDF File</label>
+            <input type="file" id="pdfFile" accept=".pdf">
+          </div>
+          <button class="btn btn-primary" id="extractBtn" onclick="extractPdf()">Extract Sections</button>
+        </div>
+        <div class="status-msg" id="extractStatus"></div>
+      </div>
     </div>
 
     <div class="import-section">
@@ -986,7 +1052,7 @@ document.querySelectorAll('.tab').forEach(tab => {
     document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
     tab.classList.add('active');
     document.getElementById(tab.dataset.tab).classList.add('active');
-    if (tab.dataset.tab === 'import-tab') { refreshCampaignSelect(); loadArkhamDBPacks(); }
+    if (tab.dataset.tab === 'import-tab') { refreshCampaignSelect(); loadArkhamDBPacks(); loadFFGCampaigns(); }
     if (tab.dataset.tab === 'settings-tab') loadSettings();
   });
 });
@@ -1003,17 +1069,61 @@ async function loadLibrary() {
     return;
   }
 
-  campaigns.forEach(c => {
+  campaigns.forEach((c, idx) => {
     const el = document.createElement('div');
     el.className = 'campaign-item' + (currentCampaignId === c.id ? ' active' : '');
+    el.draggable = true;
+    el.dataset.id = c.id;
+    el.dataset.idx = idx;
     el.innerHTML = `
       <div class="campaign-info">
         <div class="name">${escHtml(c.full_name)}</div>
         <div class="meta">${c.generated_entries}/${c.total_entries} audio files</div>
       </div>
+      <button class="rename-campaign-btn" onclick="event.stopPropagation(); startRenameCampaign('${c.id}', this.closest('.campaign-item'))" title="Rename campaign">&#9998;</button>
       <button class="del-campaign-btn" onclick="event.stopPropagation(); confirmDeleteCampaign('${c.id}', '${escAttr(c.full_name)}')" title="Delete campaign">&#10005;</button>
     `;
     el.onclick = () => selectCampaign(c.id);
+    el.addEventListener('dragstart', (e) => {
+      dragCampaignId = c.id;
+      el.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', '');
+    });
+    el.addEventListener('dragend', () => {
+      el.classList.remove('dragging');
+      document.querySelectorAll('.campaign-item.drag-over-campaign').forEach(x => x.classList.remove('drag-over-campaign'));
+      dragCampaignId = null;
+    });
+    el.addEventListener('dragover', (e) => {
+      if (!dragCampaignId || dragCampaignId === c.id) return;
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      el.classList.add('drag-over-campaign');
+    });
+    el.addEventListener('dragleave', () => {
+      el.classList.remove('drag-over-campaign');
+    });
+    el.addEventListener('drop', async (e) => {
+      e.preventDefault();
+      el.classList.remove('drag-over-campaign');
+      if (!dragCampaignId || dragCampaignId === c.id) return;
+      const srcId = dragCampaignId;
+      dragCampaignId = null;
+      const items = document.querySelectorAll('.campaign-item');
+      const order = [];
+      items.forEach(item => {
+        if (item.dataset.id === srcId) return;
+        if (item.dataset.id === c.id) order.push(srcId);
+        order.push(item.dataset.id);
+      });
+      await fetch('/api/reorder-campaigns', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ order }),
+      });
+      loadLibrary();
+    });
     list.appendChild(el);
   });
 }
@@ -1072,7 +1182,6 @@ function buildEntryWrapper(scenario, si, entry, ei) {
       <div class="char-count" id="charcount-${si}-${ei}">${entry.text.length} characters</div>
       <div class="expand-actions">
         <button class="btn btn-secondary" onclick="toggleExpand(${si}, ${ei})">Collapse</button>
-        <button class="btn btn-primary" onclick="saveText(${si}, ${ei})">Save Text</button>
       </div>
     </div>
   `;
@@ -1104,6 +1213,54 @@ function renderScenarios() {
   currentCampaignData.forEach((scenario, si) => {
     const group = document.createElement('div');
     group.className = 'scenario-group';
+    group.draggable = true;
+    group.dataset.si = si;
+
+    group.addEventListener('dragstart', (e) => {
+      if (e.target !== group) return;
+      e.stopPropagation();
+      dragScenarioData = { si };
+      group.classList.add('dragging');
+      document.body.classList.add('is-dragging-scenario');
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', '');
+    });
+    group.addEventListener('dragend', () => {
+      group.classList.remove('dragging');
+      document.body.classList.remove('is-dragging-scenario');
+      document.querySelectorAll('.scenario-group.drag-over-group').forEach(el => el.classList.remove('drag-over-group'));
+      dragScenarioData = null;
+    });
+    group.addEventListener('dragover', (e) => {
+      if (!dragScenarioData || dragScenarioData.si === si) {
+        if (!dragData && !dragSubgroupData) return;
+      }
+      if (dragScenarioData) {
+        e.preventDefault();
+        e.stopPropagation();
+        e.dataTransfer.dropEffect = 'move';
+        group.classList.add('drag-over-group');
+        return;
+      }
+    });
+    group.addEventListener('dragleave', (e) => {
+      group.classList.remove('drag-over-group');
+    });
+    group.addEventListener('drop', async (e) => {
+      if (!dragScenarioData || dragScenarioData.si === si) return;
+      e.preventDefault();
+      e.stopPropagation();
+      group.classList.remove('drag-over-group');
+      document.body.classList.remove('is-dragging-scenario');
+      const srcSi = dragScenarioData.si;
+      dragScenarioData = null;
+      await fetch(`/api/campaign/${currentCampaignId}/reorder-scenario`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ from_idx: srcSi, to_idx: si }),
+      });
+      await refreshAndRender();
+    });
 
     const scenarioOpen = openState.scenarios[si] !== undefined ? openState.scenarios[si] : true;
     const header = document.createElement('div');
@@ -1253,6 +1410,43 @@ function renderScenarios() {
     group.appendChild(entriesContainer);
     panel.appendChild(group);
   });
+}
+
+function startRenameCampaign(campaignId, itemEl) {
+  const nameEl = itemEl.querySelector('.name');
+  const currentName = nameEl.textContent;
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.className = 'label-edit';
+  input.value = currentName;
+  input.style.cssText = 'width:100%;font-size:14px;font-weight:500;padding:2px 6px;background:var(--bg);border:1px solid var(--accent);border-radius:3px;color:var(--text);outline:none;';
+
+  const finish = async () => {
+    const newName = input.value.trim();
+    if (newName && newName !== currentName) {
+      await fetch(`/api/campaign/${campaignId}/rename`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: newName }),
+      });
+      loadLibrary();
+    } else {
+      nameEl.textContent = currentName;
+      nameEl.style.display = '';
+      input.remove();
+    }
+  };
+
+  input.addEventListener('blur', finish);
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') input.blur();
+    if (e.key === 'Escape') { input.value = currentName; input.blur(); }
+  });
+
+  nameEl.style.display = 'none';
+  nameEl.parentElement.insertBefore(input, nameEl);
+  input.focus();
+  input.select();
 }
 
 function startRenameScenario(si, el) {
@@ -1470,6 +1664,8 @@ async function attachAudioFile(si, ei, inputEl) {
 // ── Drag and Drop ──
 let dragData = null;
 let dragSubgroupData = null;
+let dragScenarioData = null;
+let dragCampaignId = null;
 
 function onDragStart(e) {
   const wrapper = e.currentTarget;
@@ -1651,8 +1847,22 @@ document.addEventListener('click', () => {
 function toggleExpand(si, ei) {
   event.stopPropagation();
   const expanded = document.getElementById(`expanded-${si}-${ei}`);
+  if (expanded.classList.contains('open')) {
+    saveText(si, ei);
+  }
   expanded.classList.toggle('open');
 }
+
+document.addEventListener('click', (e) => {
+  document.querySelectorAll('.entry-expanded.open').forEach(exp => {
+    if (!exp.contains(e.target) && !exp.previousElementSibling?.contains(e.target)) {
+      const parts = exp.id.replace('expanded-', '').split('-');
+      const si = parseInt(parts[0]), ei = parseInt(parts[1]);
+      saveText(si, ei);
+      exp.classList.remove('open');
+    }
+  });
+});
 
 function updateCharCount(si, ei) {
   const textarea = document.getElementById(`text-${si}-${ei}`);
@@ -1661,7 +1871,9 @@ function updateCharCount(si, ei) {
 
 async function saveText(si, ei) {
   const textarea = document.getElementById(`text-${si}-${ei}`);
+  if (!textarea) return;
   const newText = textarea.value;
+  if (newText === currentCampaignData[si]?.entries[ei]?.text) return;
 
   await fetch(`/api/campaign/${currentCampaignId}/entry`, {
     method: 'PATCH',
@@ -1673,10 +1885,6 @@ async function saveText(si, ei) {
 
   const previewEl = document.querySelector(`#entry-${si}-${ei} .preview`);
   if (previewEl) previewEl.textContent = newText.substring(0, 120) + '...';
-
-  const charcount = document.getElementById(`charcount-${si}-${ei}`);
-  charcount.textContent = newText.length + ' characters — Saved!';
-  setTimeout(() => { charcount.textContent = newText.length + ' characters'; }, 2000);
 }
 
 function playEntry(audioPath, label, scenario, entryId) {
@@ -1765,6 +1973,68 @@ function fmtTime(s) {
 }
 
 // ── Import ──
+function switchImportMode(mode) {
+  document.getElementById('ffgImportMode').style.display = mode === 'ffg' ? '' : 'none';
+  document.getElementById('manualImportMode').style.display = mode === 'manual' ? '' : 'none';
+  document.querySelectorAll('.import-mode-tab').forEach((tab, i) => {
+    tab.classList.toggle('active', (i === 0 && mode === 'ffg') || (i === 1 && mode === 'manual'));
+  });
+}
+
+async function loadFFGCampaigns() {
+  try {
+    const res = await fetch('/api/ffg-campaigns');
+    const campaigns = await res.json();
+    const sel = document.getElementById('ffgCampaign');
+    sel.innerHTML = '<option value="">-- Select campaign --</option>';
+    campaigns.forEach(c => {
+      const opt = document.createElement('option');
+      opt.value = c.url;
+      opt.textContent = c.name;
+      opt.dataset.name = c.name;
+      sel.appendChild(opt);
+    });
+  } catch (e) {}
+}
+
+async function downloadFromFFG() {
+  const sel = document.getElementById('ffgCampaign');
+  const status = document.getElementById('ffgStatus');
+  if (!sel.value) {
+    status.textContent = 'Please select a campaign.';
+    status.className = 'status-msg error';
+    return;
+  }
+
+  const name = sel.options[sel.selectedIndex].dataset.name;
+  const btn = document.getElementById('ffgDownloadBtn');
+  btn.disabled = true;
+  status.textContent = 'Downloading and extracting... this may take a minute.';
+  status.className = 'status-msg';
+
+  try {
+    const res = await fetch('/api/ffg-download', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, url: sel.value }),
+    });
+    const data = await res.json();
+    if (data.error) {
+      status.textContent = data.error;
+      status.className = 'status-msg error';
+    } else {
+      status.textContent = `Extracted ${data.entries} entries across ${data.scenarios} scenarios.`;
+      status.className = 'status-msg success';
+      loadLibrary();
+      refreshCampaignSelect();
+    }
+  } catch (e) {
+    status.textContent = 'Network error: ' + e.message;
+    status.className = 'status-msg error';
+  }
+  btn.disabled = false;
+}
+
 async function extractPdf() {
   const fileInput = document.getElementById('pdfFile');
   const nameInput = document.getElementById('campaignName');
