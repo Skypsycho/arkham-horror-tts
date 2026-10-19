@@ -246,7 +246,8 @@ def api_ffg_download():
     pdf_path = BASE_DIR / "uploads" / filename
     pdf_path.parent.mkdir(exist_ok=True)
 
-    if not pdf_path.exists():
+    already_downloaded = pdf_path.exists()
+    if not already_downloaded:
         import urllib.request
         try:
             req = urllib.request.Request(url, headers={"User-Agent": "ArkhamTTS/1.0"})
@@ -270,6 +271,7 @@ def api_ffg_download():
         "campaign_id": campaign_id,
         "scenarios": len(sections),
         "entries": total,
+        "cached": already_downloaded,
     })
 
 
@@ -548,6 +550,49 @@ def api_move_subgroup(campaign_id):
         json.dump(data, f, indent=2, ensure_ascii=False)
 
     return jsonify({"ok": True})
+
+
+@app.route("/api/campaign/<campaign_id>/add-entry", methods=["POST"])
+def api_add_entry(campaign_id):
+    path = DATA_DIR / f"{campaign_id}.json"
+    if not path.exists():
+        return jsonify({"error": "Campaign not found"}), 404
+
+    body = request.json
+    si = body.get("scenario_idx")
+    label = body.get("label", "New Entry").strip()
+    subgroup = body.get("subgroup")
+
+    with open(path) as f:
+        data = json.load(f)
+
+    if si is None or si >= len(data):
+        return jsonify({"error": "Invalid scenario_idx"}), 400
+
+    slug = re.sub(r"[^\w\s\-]", "", label)
+    slug = re.sub(r"\s+", "_", slug).lower()[:60]
+    existing = {e["label"] for e in data[si]["entries"]}
+    base_slug = slug
+    counter = 2
+    while slug in existing:
+        slug = f"{base_slug}_{counter}"
+        counter += 1
+
+    entry = {
+        "label": slug,
+        "display_label": label,
+        "text": "",
+        "page": 0,
+    }
+    if subgroup:
+        entry["subgroup"] = subgroup
+
+    data[si]["entries"].append(entry)
+
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2, ensure_ascii=False)
+
+    return jsonify({"ok": True, "entry_idx": len(data[si]["entries"]) - 1})
 
 
 @app.route("/api/campaign/<campaign_id>/entry", methods=["PATCH"])
@@ -1129,4 +1174,4 @@ def serve_audio(filepath):
 if __name__ == "__main__":
     print("\n  Arkham Horror TTS App")
     print("  Open http://localhost:5000 in your browser\n")
-    app.run(debug=False, port=5000)
+    app.run(debug=False, host="0.0.0.0", port=5000)

@@ -76,6 +76,7 @@ Import agenda and act card read-aloud text from ArkhamDB packs. Go to the Import
 
 ## Tested Campaign Guides
 
+- Night of the Zealot
 - The Dunwich Legacy
 - The Path to Carcosa
 - Brethren of Ash

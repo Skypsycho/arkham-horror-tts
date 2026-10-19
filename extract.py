@@ -54,6 +54,7 @@ def _looks_like_non_narrative(text):
     stripped = text.strip()
     indicators = [
         r"^The investigators (were not|did not)",
+        r"^The Campaign Log",
         r"^Naomi does not have",
         r"^No Brood of",
         r"^None of these events happened",
@@ -103,7 +104,9 @@ def _prescan_scenarios(pdf):
 
         patterns = [
             r"(Scenario\s+[IVXLC\d]+[A-Za-z‐-―]*\s*[::–—]\s*(?:(?!" + stop + r").)+)",
+            r"(Part\s+[IVXLC\d]+\s*[::–—]\s*(?:(?!" + stop + r").)+)",
             r"(Interlude\s+[IVXLC\d]+\s*[::–—]\s*(?:(?!" + stop + r").)+)",
+            r"(Interlude[::]\s*(?:(?!" + stop + r").)+)",
             r"(Codex[::]\s*(?:(?!" + stop + r").)+)",
             r"(Prologue)",
             r"(Epilogue)",
@@ -294,8 +297,15 @@ def extract_sections(pdf_path):
 
         last_page = max(page_scenarios.keys()) + 1 if page_scenarios else len(pdf.pages)
 
+        has_page1_narrative = False
+        if pdf.pages:
+            p1_blocks = _extract_page_blocks(pdf.pages[0])
+            has_page1_narrative = any(b["type"] == "narrative" for b in p1_blocks)
+
         for page_num, page in enumerate(pdf.pages, start=1):
-            if page_num == 1 or page_num > last_page:
+            if page_num == 1 and not has_page1_narrative:
+                continue
+            if page_num > last_page:
                 continue
 
             if page_num in page_scenarios:
@@ -333,6 +343,17 @@ def extract_sections(pdf_path):
                     flush()
 
         flush()
+
+    # Move "Ungrouped" entries to the first real scenario
+    first_scenario = None
+    for entry in entries:
+        if entry["scenario"] != "Ungrouped":
+            first_scenario = entry["scenario"]
+            break
+    if first_scenario:
+        for entry in entries:
+            if entry["scenario"] == "Ungrouped":
+                entry["scenario"] = first_scenario
 
     # Group entries by scenario
     scenarios = {}

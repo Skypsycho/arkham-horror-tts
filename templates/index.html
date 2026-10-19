@@ -231,9 +231,12 @@ body.is-dragging-scenario .scenario-group > * { pointer-events: none; }
 .scenario-header:hover .del-campaign-btn { display: flex; }
 .scenario-header .del-campaign-btn:hover { background: var(--danger); color: #fff; }
 
-.scenario-header .add-sg-btn { display: none; color: var(--text2); }
-.scenario-header:hover .add-sg-btn { display: flex; }
-.scenario-header .add-sg-btn:hover { color: var(--accent); }
+.scenario-header .add-sg-btn, .scenario-header .add-entry-btn { display: none; color: var(--text2); }
+.scenario-header:hover .add-sg-btn, .scenario-header:hover .add-entry-btn { display: flex; }
+.scenario-header .add-sg-btn:hover, .scenario-header .add-entry-btn:hover { color: var(--accent); }
+.subgroup-header .add-entry-btn { display: none; color: var(--text2); width: 18px; height: 18px; background: transparent; border: none; cursor: pointer; border-radius: 3px; font-size: 12px; align-items: center; justify-content: center; }
+.subgroup-header:hover .add-entry-btn { display: flex; }
+.subgroup-header .add-entry-btn:hover { color: var(--accent); }
 
 .scenario-header .edit-name-btn {
   width: 22px;
@@ -1131,7 +1134,7 @@ async function loadLibrary() {
 async function selectCampaign(id) {
   currentCampaignId = id;
   document.querySelectorAll('.campaign-item').forEach(el => el.classList.remove('active'));
-  event.currentTarget?.classList.add('active');
+  if (event.currentTarget) event.currentTarget.classList.add('active');
 
   const res = await fetch(`/api/campaign/${id}`);
   currentCampaignData = await res.json();
@@ -1265,7 +1268,7 @@ function renderScenarios() {
     const scenarioOpen = openState.scenarios[si] !== undefined ? openState.scenarios[si] : true;
     const header = document.createElement('div');
     header.className = 'scenario-header' + (scenarioOpen ? ' open' : '');
-    header.innerHTML = `<span class="arrow">&#9654;</span> <span class="scenario-name">${escHtml(scenario.scenario)}</span><button class="edit-name-btn" title="Rename">&#9998;</button><button class="edit-name-btn add-sg-btn" title="Add subgroup">&#8862;</button><button class="del-campaign-btn" title="Delete group">&#10005;</button>`;
+    header.innerHTML = `<span class="arrow">&#9654;</span> <span class="scenario-name">${escHtml(scenario.scenario)}</span><button class="edit-name-btn" title="Rename">&#9998;</button><button class="edit-name-btn add-sg-btn" title="Add subgroup">&#8862;</button><button class="edit-name-btn add-entry-btn" title="Add entry">&#43;</button><button class="del-campaign-btn" title="Delete group">&#10005;</button>`;
 
     header.dataset.si = si;
     header.dataset.subgroup = '__none__';
@@ -1280,6 +1283,10 @@ function renderScenarios() {
     header.querySelector('.add-sg-btn').onclick = (e) => {
       e.stopPropagation();
       createSubgroup(si);
+    };
+    header.querySelector('.add-entry-btn').onclick = (e) => {
+      e.stopPropagation();
+      addEntry(si);
     };
     header.querySelector('.edit-name-btn').onclick = (e) => {
       e.stopPropagation();
@@ -1373,7 +1380,7 @@ function renderScenarios() {
       const sgOpen = openState.subgroups[sgKey] !== undefined ? openState.subgroups[sgKey] : false;
       const sgHeader = document.createElement('div');
       sgHeader.className = 'subgroup-header' + (sgOpen ? ' open' : '');
-      sgHeader.innerHTML = `<span class="arrow">&#9654;</span> <span class="subgroup-name">${escHtml(sgName)}</span> <span style="opacity:0.5">(${indices.length})</span> <button class="edit-name-btn" title="Rename subgroup">&#9998;</button><button class="del-sg-btn" title="Delete subgroup">&#10005;</button>`;
+      sgHeader.innerHTML = `<span class="arrow">&#9654;</span> <span class="subgroup-name">${escHtml(sgName)}</span> <span style="opacity:0.5">(${indices.length})</span> <button class="edit-name-btn" title="Rename subgroup">&#9998;</button><button class="edit-name-btn add-entry-btn" title="Add entry to subgroup">&#43;</button><button class="del-sg-btn" title="Delete subgroup">&#10005;</button>`;
 
       sgHeader.dataset.si = si;
       sgHeader.dataset.subgroup = sgName;
@@ -1388,6 +1395,10 @@ function renderScenarios() {
       sgHeader.querySelector('.edit-name-btn').onclick = (e) => {
         e.stopPropagation();
         startRenameSubgroup(si, sgName, sgHeader.querySelector('.subgroup-name'));
+      };
+      sgHeader.querySelector('.add-entry-btn').onclick = (e) => {
+        e.stopPropagation();
+        addEntry(si, sgName);
       };
       sgHeader.onclick = () => {
         sgHeader.classList.toggle('open');
@@ -1561,6 +1572,19 @@ function startRenameSubgroup(si, oldName, el) {
   el.replaceWith(input);
   input.focus();
   input.select();
+}
+
+async function addEntry(si, subgroup) {
+  var label = prompt('Enter entry name:');
+  if (!label || !label.trim()) return;
+  label = label.trim();
+
+  await fetch('/api/campaign/' + currentCampaignId + '/add-entry', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ scenario_idx: si, label: label, subgroup: subgroup || null }),
+  });
+  await refreshAndRender();
 }
 
 async function createSubgroup(si) {
@@ -1744,7 +1768,7 @@ async function onDrop(e) {
       // Find the entry's new index after move
       const freshData = await (await fetch(`/api/campaign/${currentCampaignId}`)).json();
       const movedEntry = freshData[targetSi].entries.find(
-        e => e.label === currentCampaignData[srcDrag.si].entries[srcDrag.ei]?.label
+        e => e.label === (currentCampaignData[srcDrag.si].entries[srcDrag.ei] || {}).label
       );
       if (movedEntry) {
         const newEi = freshData[targetSi].entries.indexOf(movedEntry);
@@ -1855,7 +1879,7 @@ function toggleExpand(si, ei) {
 
 document.addEventListener('click', (e) => {
   document.querySelectorAll('.entry-expanded.open').forEach(exp => {
-    if (!exp.contains(e.target) && !exp.previousElementSibling?.contains(e.target)) {
+    if (!exp.contains(e.target) && !(exp.previousElementSibling && exp.previousElementSibling.contains(e.target))) {
       const parts = exp.id.replace('expanded-', '').split('-');
       const si = parseInt(parts[0]), ei = parseInt(parts[1]);
       saveText(si, ei);
@@ -1873,7 +1897,7 @@ async function saveText(si, ei) {
   const textarea = document.getElementById(`text-${si}-${ei}`);
   if (!textarea) return;
   const newText = textarea.value;
-  if (newText === currentCampaignData[si]?.entries[ei]?.text) return;
+  if (currentCampaignData[si] && currentCampaignData[si].entries[ei] && newText === currentCampaignData[si].entries[ei].text) return;
 
   await fetch(`/api/campaign/${currentCampaignId}/entry`, {
     method: 'PATCH',
@@ -2023,7 +2047,8 @@ async function downloadFromFFG() {
       status.textContent = data.error;
       status.className = 'status-msg error';
     } else {
-      status.textContent = `Extracted ${data.entries} entries across ${data.scenarios} scenarios.`;
+      var msg = data.cached ? 'PDF already downloaded. ' : '';
+      status.textContent = msg + 'Extracted ' + data.entries + ' entries across ' + data.scenarios + ' scenarios.';
       status.className = 'status-msg success';
       loadLibrary();
       refreshCampaignSelect();
@@ -2112,8 +2137,8 @@ async function loadArkhamDBPacks() {
 
     // Sort cycles by cycle_position
     const sorted = [...groups.entries()].sort((a, b) => {
-      const posA = a[1][0]?.cycle_position || 99;
-      const posB = b[1][0]?.cycle_position || 99;
+      const posA = (a[1][0] && a[1][0].cycle_position) || 99;
+      const posB = (b[1][0] && b[1][0].cycle_position) || 99;
       return posA - posB;
     });
 

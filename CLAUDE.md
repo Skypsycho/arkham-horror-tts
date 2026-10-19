@@ -31,15 +31,17 @@ CLAUDE.md               - This file (project context for Claude Code)
 
 ### PDF Extraction (`extract.py`)
 - Uses font analysis: ArnoPro-Italic (size 9) = read-aloud narrative, ArnoPro-Bold = labels, Teutonic = headers
-- Teutonic size >= 16 = scenario headers (Scenario, Interlude, Codex, Prologue, Epilogue, Design Notes)
+- Teutonic size >= 16 = scenario headers (Scenario, Part, Interlude, Codex, Prologue, Epilogue, Design Notes)
 - Teutonic size 12-15 = sub-headers (Codex entries), treated as bold/label blocks in `_extract_page_blocks`
 - Two-column PDF layouts: blocks processed in native pdfplumber order (NOT sorted by Y-position — sorting interleaves columns)
 - Scenario headers pre-scanned from Teutonic font chars (`_prescan_scenarios`), then blocks processed page-by-page
+- Page 1 is processed if it contains narrative blocks (e.g., Night of the Zealot intro); otherwise skipped (cover page)
+- "Ungrouped" entries (narrative before the first detected scenario) are reassigned to the first real scenario
 - Resolution pages after Codex pages auto-associate back to parent scenario via `last_main_scenario` tracking
 - Design Notes pages: scenario switch is skipped so resolutions sharing the page are still captured
 - Gap absorption: consecutive non-narrative `regular` runs under 30 chars between narrative runs are merged (handles inline title references like "The King in Yellow"). Only `regular` gaps absorbed — `bold` gaps always break narrative since they're labels/headers
 - Auto-subgrouping via `_auto_subgroup()`: Resolutions, Intros, Parts, Codex Entries, Armitage's Fate
-- Filters via `_looks_like_non_narrative()`: encounter set lists, game state conditions, strategy tips, notes
+- Filters via `_looks_like_non_narrative()`: encounter set lists, game state conditions, strategy tips, notes, campaign log instructions
 - Entries sorted within scenarios by `_entry_sort_key()`: intros first, then parts, then no-resolution/investigator defeat, then resolutions
 
 ### Entry Label Detection (`_detect_entry_label`)
@@ -135,11 +137,13 @@ On Windows: double-click `run.bat`
 - `GET /api/settings` / `PUT /api/settings` - Read/write app settings
 
 ## Tested Campaign Guides
+- Night of the Zealot (`night_of_the_zealot_campaign_guide.pdf`)
 - The Dunwich Legacy (`ahc66_campaign_guide_v6-compressed.pdf`)
 - Brethren of Ash (`ahc100_campaign_guide-web.pdf`)
 - The Path to Carcosa (`ahc68_campaign_guide_v4-compressed.pdf`)
 
 ## Known Extraction Patterns by Campaign
+- **Night of the Zealot**: scenarios named "Part I/II/III:" instead of "Scenario", narrative intro on page 1, Campaign Log instructions in italic to filter
 - **Dunwich Legacy**: two-column layout, Armitage's Fate interludes, encounter set names in italic within Setup sections
 - **Brethren of Ash**: Codex pages (Teutonic size 14 entry headers), resolution pages after Codex pages, Strategy Tips to filter
 - **Path to Carcosa**: inline "The King in Yellow" title references in regular font within italic narrative, Lola's Prologue conditional, Reality's Shadow / Daniel conditional labels
