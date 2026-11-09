@@ -146,7 +146,7 @@ header {
    Arms: static/cthulhu-arms.svg (tools/cthulhu_svg.py) */
 .campaign-item.active {
   min-height: 70px;
-  padding-left: 56px;
+  padding-left: 66px;
   background:
     radial-gradient(ellipse 60px 46px at 12px 55%, rgba(60, 200, 140, .18), transparent 70%),
     var(--bg3);
@@ -162,8 +162,10 @@ header {
 .cthulhu-mark .t-over { animation-duration: .85s, 5.6s; animation-delay: .3s, 1.15s; }
 .cthulhu-mark .t-under { animation-duration: .85s, 6.8s; animation-delay: .35s, 1.2s; }
 
-/* ~30% of the head sits past the left edge, so it emerges from the side */
-.cthulhu-mark .cth-art { position: absolute; left: -19px; top: 0; bottom: 0; height: 100%;
+/* The head is 1.5x the row height: its top and eyes sit in the row, the
+   shoulders run off the bottom, and ~35% sits past the left edge so it
+   emerges from the side. The row clips whatever sticks out. */
+.cthulhu-mark .cth-art { position: absolute; left: -34px; top: 0; height: 150%;
   transform-origin: 50% 100%;
   animation: cthRise .7s cubic-bezier(.2,.8,.2,1) both, cthBreathe 6s ease-in-out .7s infinite; }
 .cthulhu-mark .cth-art img { display: block; height: 100%; width: auto;
