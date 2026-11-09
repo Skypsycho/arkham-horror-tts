@@ -15,7 +15,8 @@ A web app that extracts read-aloud narrative text from Arkham Horror LCG campaig
 app.py                  - Flask web app (main entry point)
 extract.py              - PDF extraction logic (font-based italic text detection)
 generate.py             - ElevenLabs TTS generation (supports model selection)
-arkham_tts.py           - CLI entry point
+arkham_tts.py           - CLI entry point (extract / generate / voices / merge)
+merge.py                - Merge a fresh extraction into an existing, user-edited campaign
 templates/index.html    - Full UI (single file, inline CSS/JS)
 data/                   - Campaign JSON files (extracted sections)
 data/_arkhamdb_packs.json - Cached ArkhamDB pack list (with cycle grouping)
@@ -23,6 +24,8 @@ audio/                  - Generated audio files in human-readable paths (<Campai
 uploads/                - Temporarily stored PDFs uploaded via web UI
 settings.json           - ElevenLabs API key, voice ID, model ID
 requirements.txt        - Python dependencies (flask, pdfplumber, elevenlabs)
+requirements-dev.txt    - Adds pytest
+tests/                  - pytest suite (see Tests below); tests/fixtures/ holds saved ArkhamDB responses
 run.bat                 - Windows launcher
 CLAUDE.md               - This file (project context for Claude Code)
 ```
@@ -40,9 +43,25 @@ CLAUDE.md               - This file (project context for Claude Code)
 - Resolution pages after Codex pages auto-associate back to parent scenario via `last_main_scenario` tracking
 - Design Notes pages: scenario switch is skipped so resolutions sharing the page are still captured
 - Gap absorption: consecutive non-narrative `regular` runs under 30 chars between narrative runs are merged (handles inline title references like "The King in Yellow"). Only `regular` gaps absorbed — `bold` gaps always break narrative since they're labels/headers
+- Spatial checks: style runs are split when text jumps columns (`COLUMN_JUMP`), and narrative runs are only merged when on the same/next line (`MAX_LINE_GAP`). Stops card subtitles like "(Repossess the Past)" or campaign-log phrases gluing onto narrative elsewhere on the page
+- Header position: `_prescan_scenarios` also returns each header's (x0, top). On a page whose header starts in the right column or mid-column, blocks before it (earlier column, or above it in the same column) stay with the previous scenario (`_precedes_header`) — e.g. a resolution in the left column of an Interlude's first page
+- Page-break continuations: an unlabeled narrative block starting lowercase is appended to the latest entry in the scenario that ends mid-sentence
+- "continue reading": when regular text between two narrative blocks says "continue reading" (Brethren Codex entries), the second half is labeled "<label> (cont.)"
+- Unlabeled intros: narrative before the first header → "Campaign Intro"; the first unlabeled entry by reading position in a scenario → "Intro" (or "Prologue"/"Epilogue"); skipped for Codex groups
+- `_cut_trailing_rules_text`: truncates narrative at "… is a campaign for Arkham Horror", "Check Campaign Log", "Congratulations on completing" (rules text sharing an italic text box)
+- AnkeCalligraphicFG (handwriting font for journal dates, Forgotten Age) is treated as narrative (`journal` style)
 - Auto-subgrouping via `_auto_subgroup()`: Resolutions, Intros, Parts, Codex Entries, Armitage's Fate
 - Filters via `_looks_like_non_narrative()`: encounter set lists, game state conditions, strategy tips, notes, campaign log instructions
 - Entries sorted within scenarios by `_entry_sort_key()`: intros first, then parts, then no-resolution/investigator defeat, then resolutions
+
+### Re-extraction merge (`merge.py`, `arkham_tts.py merge <campaign_id> [--pdf] [--apply]`)
+- Lets extractor improvements reach an existing library without losing edits. Dry run by default; `--apply` backs up to `data/_backups/<id>-<timestamp>.json` first
+- Matches old ↔ new entries by shared 6-word shingles (greedy one-to-one by overlap); extracted scenarios map to library scenarios by majority of matched entries, so renamed scenarios still match
+- Label changes only for generic "Entry N" labels, and only when the old text corresponds to the new entry. Text changes only when one text contains the other (≥90% shingles) — otherwise treated as hand-edited
+- Entries with audio on disk: text and scenario never changed (reported instead); labels may still upgrade
+- Moves entries to the scenario the extractor now assigns, except audio entries and the only entry of a group (likely deliberate grouping)
+- Removes old fragments now contained in a merged entry (no audio only); adds new passages after their extraction-order predecessor; never touches ArkhamDB card entries (Deck subgroups / page 0); unmatched entries are reported, not deleted
+- Note: `/api/ffg-download` still **overwrites** the campaign file — use merge for an existing campaign
 
 ### Entry Label Detection (`_detect_entry_label`)
 - Three-tier matching on bold text blocks:
@@ -50,6 +69,7 @@ CLAUDE.md               - This file (project context for Claude Code)
   2. Known patterns without colon — uses FIRST match (handles "Resolution 2 (read Investigator Defeat first!):" where Investigator Defeat appears later)
   3. Generic fallback: any bold text ending with `:` becomes a label if under 50 chars and doesn't start with game-mechanics verbs (Proceed, Check, Setup, etc.)
 - Generic fallback catches campaign-specific labels like "Reality's Shadow 1:", "Sebastien's Information:", "Daniel Was Possessed:", "Lola's Prologue:"
+- Checked before the tiers: `If <Name> is not listed under "...:"` (Dunwich Interlude II survivors) → label `<Name>`
 
 ### Web App (`app.py`)
 - Campaign data stored as JSON arrays of scenario objects in `data/`
@@ -99,7 +119,9 @@ CLAUDE.md               - This file (project context for Claude Code)
 - When `back_flavor` is empty, italic text extracted from `back_text` HTML via `<i>` tag parsing
 - Duplicate detection by `label` field before adding entries
 - Multi-pack import: frontend loops through selected packs sequentially, shows progress
-- Cards matched to existing scenarios by fuzzy encounter_code comparison
+- Cards matched to existing scenarios by fuzzy encounter_code comparison, with `ENCOUNTER_ALIASES` in `app.py` for sub-encounter sets whose names aren't in the scenario title (e.g. Heart of the Elders: `pillars_of_judgment` → Part 1, `knyan` → Part 2)
+- Fallback: if a pack has exactly one `scenario` card, unmatched encounter codes go to that scenario (e.g. Black Stars Rise's `vortex`/`flood` agendas)
+- Cards sharing a name (alternate agenda decks) get the encounter set name appended (label + display) on whichever side's text differs; identical sides are imported once
 - Old campaigns split across multiple packs (e.g., Dunwich: dwl, tmm, tece, bota, uau, wda, litas); newer campaigns have single Campaign Expansion packs (e.g., dwlc)
 
 ## Running the App
@@ -110,6 +132,18 @@ python app.py
 ```
 
 On Windows: double-click `run.bat`
+
+## Tests
+```bash
+pip install -r requirements-dev.txt
+python -m pytest            # everything (~25s)
+python -m pytest -m "not pdf"   # fast unit + ArkhamDB tests only
+```
+- `tests/test_extract_units.py` — extract.py helpers (labels, filters, header position, sort order)
+- `tests/test_extract_guides.py` (`pdf` marker) — runs extraction on the real guides in `uploads/` (or `$ARKHAM_PDF_DIR`); skipped if a PDF is missing. Pins verified behaviors per campaign; unlabeled counts are upper bounds — tighten them when extraction improves
+- `tests/test_arkhamdb_import.py` — import endpoint with saved pack responses in `tests/fixtures/` (no network)
+- `tests/test_merge.py` — merge rules on synthetic campaigns (edits/audio/cards protected, moves, fragments, additions)
+- Run the suite after any change to `extract.py`; fixes for one campaign often regress another
 
 ## API Endpoints
 - `GET /api/library` - List all campaigns with entry/audio counts (respects custom names/order)
@@ -145,9 +179,11 @@ On Windows: double-click `run.bat`
 - The Dunwich Legacy (`ahc66_campaign_guide_v6-compressed.pdf`)
 - Brethren of Ash (`ahc100_campaign_guide-web.pdf`)
 - The Path to Carcosa (`ahc68_campaign_guide_v4-compressed.pdf`)
+- The Forgotten Age (`ahc73_campaign_guide_v2-compressed.pdf`)
 
 ## Known Extraction Patterns by Campaign
 - **Night of the Zealot**: scenarios named "Part I/II/III:" instead of "Scenario", narrative intro on page 1, Campaign Log instructions in italic to filter
 - **Dunwich Legacy**: two-column layout, Armitage's Fate interludes, encounter set names in italic within Setup sections
 - **Brethren of Ash**: Codex pages (Teutonic size 14 entry headers), resolution pages after Codex pages, Strategy Tips to filter
 - **Path to Carcosa**: inline "The King in Yellow" title references in regular font within italic narrative, Lola's Prologue conditional, Reality's Shadow / Daniel conditional labels
+- **Forgotten Age**: journal entries with handwriting-font date lines, text frames that flow from the bottom of the right column back to the top-left (Boundary Beyond intro) and across pages, scenario headers in the right column with the previous scenario's resolutions in the left column, many unlabeled single intros

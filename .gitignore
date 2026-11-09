@@ -4,6 +4,9 @@ audio/
 uploads/
 settings.json
 data/*.json
+data/_backups/
+.claude/settings.local.json
+.pytest_cache/
 voice_sample_*.mp3
 Banner.jpg
 Banner2.jpg
