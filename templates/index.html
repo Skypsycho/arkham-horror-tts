@@ -591,6 +591,238 @@ body.is-dragging .scenario-header > * { pointer-events: none; }
   margin-top: 4px;
 }
 
+/* ── Library toolbar + Play / Edit modes ── */
+.library-toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 20px;
+  background: rgba(22, 33, 62, 0.96);
+  border-bottom: 1px solid var(--border);
+}
+
+.library-toolbar .toolbar-title {
+  flex: 1;
+  min-width: 0;
+  font-family: 'Cormorant Garamond', 'Palatino Linotype', Palatino, serif;
+  font-style: italic;
+  font-size: 20px;
+  color: var(--accent);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.library-toolbar .toolbar-stats { font-size: 12px; color: var(--text2); white-space: nowrap; }
+
+.mode-switch {
+  display: flex;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 3px;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.mode-switch button {
+  border: none;
+  background: transparent;
+  color: var(--text2);
+  padding: 6px 14px;
+  border-radius: 4px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.mode-switch button:hover { color: var(--text); }
+.mode-switch button.active { background: var(--bg3); color: var(--accent); }
+
+.text-btn { display: none; }
+.no-audio-tag { display: none; }
+
+/* Play mode: titles + play buttons; editing tools tucked away */
+body.mode-play .drag-handle,
+body.mode-play .edit-label-btn,
+body.mode-play .entry-info .preview,
+body.mode-play .entry-actions > :not(.text-btn),
+body.mode-play .scenario-header .edit-name-btn,
+body.mode-play .scenario-header .del-campaign-btn,
+body.mode-play .subgroup-header .edit-name-btn,
+body.mode-play .subgroup-header .del-sg-btn,
+body.mode-play .add-subgroup-btn { display: none !important; }
+
+body.mode-play .text-btn { display: flex; }
+
+body.mode-play .entry-item {
+  padding: 8px 20px;
+  gap: 14px;
+  cursor: pointer;
+}
+
+body.mode-play .entry-item.no-audio { cursor: default; }
+body.mode-play .entry-item.no-audio .entry-info .label { color: var(--text2); }
+
+body.mode-play .entry-item .play-btn { width: 38px; height: 38px; font-size: 14px; }
+
+body.mode-play .entry-info .label {
+  font-size: 16px;
+  font-family: 'Cormorant Garamond', 'Palatino Linotype', Palatino, serif;
+  font-weight: 500;
+}
+
+body.mode-play .no-audio-tag {
+  display: inline-block;
+  margin-left: 8px;
+  font-size: 11px;
+  color: var(--text2);
+  opacity: 0.7;
+  font-family: 'Segoe UI', system-ui, sans-serif;
+}
+
+/* Edit mode: show more of each entry's text */
+body.mode-edit .entry-info .preview {
+  white-space: normal;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  line-height: 1.45;
+}
+
+/* Edit mode: a card's back sits under its front */
+body.mode-edit .entry-wrapper.card-back .entry-item { padding-left: 40px; }
+body.mode-edit .entry-wrapper.card-back .entry-info .label::before {
+  content: '↳ flip side';
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--accent2);
+  margin-right: 6px;
+}
+
+/* ── Act / Agenda card tiles (play mode) ── */
+.card-tile-wrap { border-bottom: 1px solid rgba(255,255,255,0.03); }
+
+.card-tile {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 20px;
+}
+
+.card-tile:hover { background: var(--surface); }
+
+.card-icon {
+  width: 30px;
+  height: 42px;
+  flex-shrink: 0;
+  perspective: 300px;
+}
+
+.card-icon-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transition: transform 0.6s;
+  transform-style: preserve-3d;
+}
+
+.card-tile.flipped .card-icon-inner { transform: rotateY(180deg); }
+
+.card-icon-face {
+  position: absolute;
+  inset: 0;
+  border-radius: 4px;
+  border: 1px solid var(--accent2);
+  backface-visibility: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.card-icon-face.front { background: var(--bg3); color: var(--accent); }
+.card-icon-face.back { background: var(--accent2); color: #fff; transform: rotateY(180deg); }
+
+.card-title { flex: 1; min-width: 0; }
+
+.card-title .card-type {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text2);
+}
+
+.card-title .card-name {
+  font-size: 16px;
+  font-family: 'Cormorant Garamond', 'Palatino Linotype', Palatino, serif;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.card-sides { display: flex; gap: 8px; flex-shrink: 0; flex-wrap: wrap; justify-content: flex-end; }
+
+.card-side {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 12px 4px 4px;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--text2);
+  transition: all 0.2s;
+  background: transparent;
+}
+
+.card-side:hover { border-color: var(--accent2); color: var(--text); }
+.card-side .play-btn {
+  width: 28px; height: 28px; border-radius: 50%;
+  border: 1px solid var(--accent2); background: transparent; color: var(--accent);
+  display: flex; align-items: center; justify-content: center; font-size: 11px; cursor: pointer;
+}
+.card-side .play-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+.card-side.no-audio { cursor: default; opacity: 0.6; }
+
+/* the side you'd read next is highlighted: front first, back once flipped */
+.card-tile:not(.flipped) .card-side.front,
+.card-tile.flipped .card-side.back {
+  border-color: var(--accent2);
+  color: var(--accent);
+}
+.card-tile.flipped .card-side.front { opacity: 0.55; }
+
+.card-side.playing { background: var(--bg3); border-color: var(--accent); color: var(--accent); }
+.card-side .play-btn.playing-btn { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+
+.card-tile .text-btn {
+  width: 28px; height: 28px; border: none; background: transparent; color: var(--text2);
+  cursor: pointer; border-radius: 4px; font-size: 14px; align-items: center; justify-content: center;
+}
+.card-tile .text-btn:hover { background: var(--surface2); color: var(--text); }
+
+.card-tile-wrap .entry-expanded { padding-left: 64px; }
+.card-tile-wrap .entry-expanded .side-caption {
+  font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;
+  color: var(--accent2); padding: 8px 0 4px;
+}
+
+@media (max-width: 700px) {
+  .library-toolbar { padding: 8px 12px; }
+  .library-toolbar .toolbar-stats { display: none; }
+  .mode-switch button { padding: 6px 10px; }
+  .card-tile { flex-wrap: wrap; padding: 10px 12px; }
+  .card-sides { width: 100%; justify-content: flex-start; padding-left: 44px; }
+}
+
 /* ── Audio Player Bar ── */
 .player-bar {
   background: rgba(22, 33, 62, 0.92);
@@ -1097,6 +1329,33 @@ const audioEl = document.getElementById('audioEl');
 let currentCampaignId = null;
 let currentCampaignData = null;
 let currentPlayingEntry = null;
+const campaignNames = {};
+// Act/agenda cards turned to their back side, keyed "<campaign>|<si>|<card key>"
+const flippedCards = new Set();
+
+// ── Play / Edit mode ──
+let viewMode = 'play';
+try { viewMode = localStorage.getItem('viewMode') === 'edit' ? 'edit' : 'play'; } catch (e) {}
+document.body.classList.add(`mode-${viewMode}`);
+
+function isPlayMode() { return viewMode === 'play'; }
+
+function setViewMode(mode) {
+  if (mode === viewMode) return;
+  viewMode = mode;
+  document.body.classList.remove('mode-play', 'mode-edit');
+  document.body.classList.add(`mode-${mode}`);
+  try { localStorage.setItem('viewMode', mode); } catch (e) {}
+  if (currentCampaignData) renderScenarios();
+}
+
+// "Agenda: The Tide Rises (Front)" / "Agenda: Let The Storm Rage – The Vortex Above (Back)"
+function parseCard(entry) {
+  if (!(entry.subgroup || '').endsWith('Deck')) return null;
+  const m = (entry.display_label || '').match(/^(Act|Agenda): (.+?)(?: – (.+?))? \((Front|Back)\)$/);
+  if (!m) return null;
+  return { type: m[1], name: m[2], variant: m[3] || null, side: m[4].toLowerCase(), key: `${m[1]}|${m[2]}` };
+}
 
 // ── Tabs ──
 document.querySelectorAll('.tab').forEach(tab => {
@@ -1123,6 +1382,7 @@ async function loadLibrary() {
   }
 
   campaigns.forEach((c, idx) => {
+    campaignNames[c.id] = c.full_name;
     const el = document.createElement('div');
     el.className = 'campaign-item' + (currentCampaignId === c.id ? ' active' : '');
     el.draggable = true;
@@ -1192,10 +1452,27 @@ async function selectCampaign(id) {
   loadLibrary();
 }
 
+function buildExpandedHtml(si, ei, entry, caption = '') {
+  return `
+    <div class="entry-expanded" id="expanded-${si}-${ei}">
+      ${caption ? `<div class="side-caption">${escHtml(caption)}</div>` : ''}
+      <textarea id="text-${si}-${ei}" oninput="updateCharCount(${si}, ${ei})">${escHtml(entry.text)}</textarea>
+      <div class="char-count" id="charcount-${si}-${ei}">${entry.text.length} characters</div>
+      <div class="expand-actions">
+        <button class="btn btn-secondary" onclick="toggleExpand(${si}, ${ei})">Collapse</button>
+      </div>
+    </div>`;
+}
+
 function buildEntryWrapper(scenario, si, entry, ei) {
   const wrapper = document.createElement('div');
   wrapper.className = 'entry-wrapper';
-  wrapper.draggable = true;
+  // A card's back directly under its front
+  const card = parseCard(entry);
+  const prev = scenario.entries[ei - 1];
+  const prevCard = prev && parseCard(prev);
+  if (card && card.side === 'back' && prevCard && prevCard.key === card.key) wrapper.classList.add('card-back');
+  wrapper.draggable = !isPlayMode();
   wrapper.dataset.si = si;
   wrapper.dataset.ei = ei;
   wrapper.dataset.subgroup = entry.subgroup || '__none__';
@@ -1210,16 +1487,17 @@ function buildEntryWrapper(scenario, si, entry, ei) {
   const audioPath = entry.audio_file || `${currentCampaignId}/${scenario.scenario_folder}/${entry.label}.mp3`;
 
   wrapper.innerHTML = `
-    <div class="entry-item" id="entry-${si}-${ei}">
+    <div class="entry-item${hasAudio ? '' : ' no-audio'}" id="entry-${si}-${ei}">
       <span class="drag-handle" title="Drag to reorder">&#8942;&#8942;</span>
       <button class="play-btn" ${hasAudio ? '' : 'disabled'} onclick="playEntry('${escAttr(audioPath)}', '${escAttr(entry.display_label)}', '${escAttr(scenario.scenario)}', '${si}-${ei}')">
         &#9654;
       </button>
       <div class="entry-info">
-        <span class="label">${escHtml(entry.display_label)}<button class="edit-label-btn" onclick="event.stopPropagation(); startRename(${si}, ${ei}, this.parentElement)" title="Rename">&#9998;</button></span>
-        <div class="preview" onclick="toggleExpand(${si}, ${ei})" title="Click to expand text">${escHtml(entry.text.substring(0, 120))}...</div>
+        <span class="label">${escHtml(entry.display_label)}${hasAudio ? '' : '<span class="no-audio-tag">no audio</span>'}<button class="edit-label-btn" onclick="event.stopPropagation(); startRename(${si}, ${ei}, this.parentElement)" title="Rename">&#9998;</button></span>
+        <div class="preview" onclick="toggleExpand(${si}, ${ei})" title="Click to expand text">${escHtml(entry.text)}</div>
       </div>
       <div class="entry-actions">
+        <button class="icon-btn text-btn" onclick="toggleExpand(${si}, ${ei})" title="Show / edit text">&#182;</button>
         ${entry.generated_at ? `<button class="icon-btn info-btn" onclick="event.stopPropagation(); toggleInfo(${si}, ${ei})" title="Generation info">&#9432;<div class="info-popover" id="info-${si}-${ei}">Generated: ${escHtml(entry.generated_at)}<br>Model: ${escHtml(entry.generated_model || 'unknown')}</div></button>` : ''}
         <button class="icon-btn ${hasAudio ? 'regen-btn' : 'gen-btn gen-btn-label'}" id="genbtn-${si}-${ei}" onclick="generateSingleEntry(${si}, ${ei})" title="${hasAudio ? 'Regenerate audio' : 'Generate audio'}">
           ${hasAudio ? '&#8635;' : '&#9889; Generate audio'}
@@ -1230,15 +1508,118 @@ function buildEntryWrapper(scenario, si, entry, ei) {
         <button class="icon-btn del-btn" onclick="confirmDeleteEntry(${si}, ${ei}, '${escAttr(entry.display_label)}', '${escAttr(scenario.scenario)}')" title="Delete entry">&#10005;</button>
       </div>
     </div>
-    <div class="entry-expanded" id="expanded-${si}-${ei}">
-      <textarea id="text-${si}-${ei}" oninput="updateCharCount(${si}, ${ei})">${escHtml(entry.text)}</textarea>
-      <div class="char-count" id="charcount-${si}-${ei}">${entry.text.length} characters</div>
-      <div class="expand-actions">
-        <button class="btn btn-secondary" onclick="toggleExpand(${si}, ${ei})">Collapse</button>
-      </div>
-    </div>
+    ${buildExpandedHtml(si, ei, entry)}
   `;
+
+  // Play mode: the whole row is the play button
+  wrapper.querySelector('.entry-item').addEventListener('click', (e) => {
+    if (!isPlayMode() || e.target.closest('button, input, textarea')) return;
+    const btn = wrapper.querySelector('.play-btn');
+    if (!btn.disabled) btn.click();
+  });
   return wrapper;
+}
+
+// Play mode: one tile per act/agenda card, with its front and back side(s).
+// Returns DOM nodes in the order the entries appear; non-card entries fall
+// back to normal rows.
+function buildCardNodes(scenario, si, indices) {
+  const nodes = [];
+  const cards = new Map();
+  indices.forEach(ei => {
+    const entry = scenario.entries[ei];
+    const card = parseCard(entry);
+    if (!card) { nodes.push(buildEntryWrapper(scenario, si, entry, ei)); return; }
+    if (!cards.has(card.key)) {
+      const c = { ...card, fronts: [], backs: [] };
+      cards.set(card.key, c);
+      nodes.push(c);
+    }
+    cards.get(card.key)[card.side === 'front' ? 'fronts' : 'backs'].push({ ei, entry, variant: card.variant });
+  });
+  return nodes.map(n => (n instanceof Node ? n : buildCardTile(scenario, si, n)));
+}
+
+function buildCardTile(scenario, si, card) {
+  const flipKey = `${currentCampaignId}|${si}|${card.key}`;
+  const wrap = document.createElement('div');
+  wrap.className = 'card-tile-wrap';
+
+  const side = (s, which) => {
+    const e = s.entry;
+    const hasAudio = e.has_audio;
+    const audioPath = e.audio_file || `${currentCampaignId}/${scenario.scenario_folder}/${e.label}.mp3`;
+    const name = which === 'front' ? 'Front' : (s.variant ? `Back · ${s.variant}` : 'Back');
+    const title = hasAudio ? `Play ${name.toLowerCase()}` : 'No audio yet — generate it in Edit mode';
+    return `
+      <div class="card-side ${which}${hasAudio ? '' : ' no-audio'}" id="entry-${si}-${s.ei}" data-side="${which}" title="${escAttr(title)}">
+        <button class="play-btn" ${hasAudio ? '' : 'disabled'}
+          onclick="playEntry('${escAttr(audioPath)}', '${escAttr(e.display_label)}', '${escAttr(scenario.scenario)}', '${si}-${s.ei}')">&#9654;</button>
+        <span>${escHtml(name)}</span>
+      </div>`;
+  };
+
+  const sides = [...card.fronts.map(s => side(s, 'front')), ...card.backs.map(s => side(s, 'back'))].join('');
+  const all = [...card.fronts, ...card.backs];
+  const flipped = flippedCards.has(flipKey) || (!card.fronts.length && card.backs.length);
+
+  wrap.innerHTML = `
+    <div class="card-tile${flipped ? ' flipped' : ''}" data-flip-key="${escAttr(flipKey)}">
+      <div class="card-icon" title="Click to flip">
+        <div class="card-icon-inner">
+          <div class="card-icon-face front">${card.type === 'Act' ? 'ACT' : 'AGD'}</div>
+          <div class="card-icon-face back">&#8635;</div>
+        </div>
+      </div>
+      <div class="card-title">
+        <div class="card-type">${escHtml(card.type)}</div>
+        <div class="card-name" title="${escAttr(card.name)}">${escHtml(card.name)}</div>
+      </div>
+      <div class="card-sides">${sides}</div>
+      <button class="text-btn" title="Show / edit text">&#182;</button>
+    </div>
+    ${all.map(s => buildExpandedHtml(si, s.ei, s.entry,
+        s.entry.display_label.match(/\((Front|Back)\)$/)[1] + (s.variant ? ` · ${s.variant}` : ''))).join('')}
+  `;
+
+  const tile = wrap.querySelector('.card-tile');
+  // Clicking a side (not just its button) plays it
+  wrap.querySelectorAll('.card-side').forEach(el => el.addEventListener('click', (e) => {
+    if (e.target.closest('button')) return;
+    const btn = el.querySelector('.play-btn');
+    if (!btn.disabled) btn.click();
+  }));
+  wrap.querySelector('.card-icon').addEventListener('click', (e) => {
+    e.stopPropagation();
+    setCardFlipped(tile, !tile.classList.contains('flipped'));
+  });
+  wrap.querySelector('.text-btn').addEventListener('click', (e) => {
+    e.stopPropagation();
+    const panels = [...wrap.querySelectorAll('.entry-expanded')];
+    const open = !panels.some(p => p.classList.contains('open'));
+    panels.forEach(p => {
+      if (!open && p.classList.contains('open')) {
+        const [psi, pei] = p.id.replace('expanded-', '').split('-').map(Number);
+        saveText(psi, pei);
+      }
+      p.classList.toggle('open', open);
+    });
+  });
+  return wrap;
+}
+
+function setCardFlipped(tile, flipped) {
+  if (!tile) return;
+  tile.classList.toggle('flipped', flipped);
+  const key = tile.dataset.flipKey;
+  if (flipped) flippedCards.add(key); else flippedCards.delete(key);
+}
+
+function resetCardFlips() {
+  [...flippedCards].filter(k => k.startsWith(`${currentCampaignId}|`)).forEach(k => flippedCards.delete(k));
+  document.querySelectorAll('.card-tile.flipped').forEach(t => {
+    if (t.querySelector('.card-side.front')) t.classList.remove('flipped');
+  });
 }
 
 function getOpenState() {
@@ -1263,10 +1644,11 @@ function renderScenarios() {
   }
 
   panel.innerHTML = '';
+  panel.appendChild(buildLibraryToolbar());
   currentCampaignData.forEach((scenario, si) => {
     const group = document.createElement('div');
     group.className = 'scenario-group';
-    group.draggable = true;
+    group.draggable = !isPlayMode();
     group.dataset.si = si;
 
     group.addEventListener('dragstart', (e) => {
@@ -1372,7 +1754,7 @@ function renderScenarios() {
     subgroups.forEach((indices, sgName) => {
       const section = document.createElement('div');
       section.className = 'subgroup-section';
-      section.draggable = true;
+      section.draggable = !isPlayMode();
       section.dataset.si = si;
       section.dataset.sgName = sgName;
 
@@ -1458,9 +1840,13 @@ function renderScenarios() {
       const sgEntries = document.createElement('div');
       sgEntries.className = 'subgroup-entries' + (sgOpen ? ' open' : '');
 
-      indices.forEach(ei => {
-        sgEntries.appendChild(buildEntryWrapper(scenario, si, scenario.entries[ei], ei));
-      });
+      if (isPlayMode() && sgName.endsWith('Deck')) {
+        buildCardNodes(scenario, si, indices).forEach(n => sgEntries.appendChild(n));
+      } else {
+        indices.forEach(ei => {
+          sgEntries.appendChild(buildEntryWrapper(scenario, si, scenario.entries[ei], ei));
+        });
+      }
 
       section.appendChild(sgHeader);
       section.appendChild(sgEntries);
@@ -1471,6 +1857,26 @@ function renderScenarios() {
     group.appendChild(entriesContainer);
     panel.appendChild(group);
   });
+}
+
+function buildLibraryToolbar() {
+  const bar = document.createElement('div');
+  bar.className = 'library-toolbar';
+  let total = 0, withAudio = 0;
+  currentCampaignData.forEach(s => s.entries.forEach(e => { total++; if (e.has_audio) withAudio++; }));
+  const name = campaignNames[currentCampaignId] || currentCampaignId;
+  bar.innerHTML = `
+    <div class="toolbar-title" title="${escAttr(name)}">${escHtml(name)}</div>
+    <div class="toolbar-stats">${withAudio}/${total} with audio</div>
+    ${isPlayMode() ? '<button class="btn btn-secondary" id="resetFlipsBtn" style="padding:5px 12px;font-size:12px" title="Turn every act/agenda card back to its front">Reset cards</button>' : ''}
+    <div class="mode-switch" role="tablist" aria-label="View mode">
+      <button class="${isPlayMode() ? 'active' : ''}" data-mode="play" title="Titles and play buttons only">&#9654; Play</button>
+      <button class="${isPlayMode() ? '' : 'active'}" data-mode="edit" title="Text, generation and organizing tools">&#9998; Edit</button>
+    </div>`;
+  bar.querySelectorAll('.mode-switch button').forEach(b => b.onclick = () => setViewMode(b.dataset.mode));
+  const reset = bar.querySelector('#resetFlipsBtn');
+  if (reset) reset.onclick = resetCardFlips;
+  return bar;
 }
 
 function startRenameCampaign(campaignId, itemEl) {
@@ -1929,6 +2335,9 @@ function toggleExpand(si, ei) {
 
 document.addEventListener('click', (e) => {
   document.querySelectorAll('.entry-expanded.open').forEach(exp => {
+    // A card's side panels stay open together while you work within the card
+    const cardWrap = exp.closest('.card-tile-wrap');
+    if (cardWrap && cardWrap.contains(e.target)) return;
     if (!exp.contains(e.target) && !(exp.previousElementSibling && exp.previousElementSibling.contains(e.target))) {
       const parts = exp.id.replace('expanded-', '').split('-');
       const si = parseInt(parts[0]), ei = parseInt(parts[1]);
@@ -1958,7 +2367,7 @@ async function saveText(si, ei) {
   currentCampaignData[si].entries[ei].text = newText;
 
   const previewEl = document.querySelector(`#entry-${si}-${ei} .preview`);
-  if (previewEl) previewEl.textContent = newText.substring(0, 120) + '...';
+  if (previewEl) previewEl.textContent = newText;
 }
 
 function playEntry(audioPath, label, scenario, entryId) {
@@ -1969,7 +2378,7 @@ function playEntry(audioPath, label, scenario, entryId) {
     return;
   }
 
-  document.querySelectorAll('.entry-item.playing').forEach(el => el.classList.remove('playing'));
+  document.querySelectorAll('.entry-item.playing, .card-side.playing').forEach(el => el.classList.remove('playing'));
   document.querySelectorAll('.play-btn.playing-btn').forEach(el => {
     el.classList.remove('playing-btn');
     el.innerHTML = '&#9654;';
@@ -1981,6 +2390,8 @@ function playEntry(audioPath, label, scenario, entryId) {
     const btn = item.querySelector('.play-btn');
     btn.classList.add('playing-btn');
     btn.innerHTML = '&#9646;&#9646;';
+    // Reading a card's front shows the front; reading a back flips it
+    if (item.dataset.side) setCardFlipped(item.closest('.card-tile'), item.dataset.side === 'back');
   }
 
   currentPlayingEntry = entryId;
@@ -2031,12 +2442,18 @@ audioEl.addEventListener('timeupdate', () => {
 });
 
 audioEl.addEventListener('ended', () => {
+  // Finished the front of a card: flip it so the back is ready
+  const finished = currentPlayingEntry && document.getElementById(`entry-${currentPlayingEntry}`);
+  if (finished && finished.dataset.side === 'front') {
+    const tile = finished.closest('.card-tile');
+    if (tile && tile.querySelector('.card-side.back')) setCardFlipped(tile, true);
+  }
   document.getElementById('playerPlayBtn').innerHTML = '&#9654;';
   document.querySelectorAll('.play-btn.playing-btn').forEach(el => {
     el.classList.remove('playing-btn');
     el.innerHTML = '&#9654;';
   });
-  document.querySelectorAll('.entry-item.playing').forEach(el => el.classList.remove('playing'));
+  document.querySelectorAll('.entry-item.playing, .card-side.playing').forEach(el => el.classList.remove('playing'));
   currentPlayingEntry = null;
 });
 
