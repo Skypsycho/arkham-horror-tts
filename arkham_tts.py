@@ -13,6 +13,11 @@ Usage:
 
   4. List available ElevenLabs voices:
      python arkham_tts.py voices
+
+  5. Re-extract a library campaign with the current extractor and merge the
+     improvements in, keeping your edits, audio and ArkhamDB cards:
+     python arkham_tts.py merge <campaign_id> [--pdf <path>]      (dry run)
+     python arkham_tts.py merge <campaign_id> [--pdf <path>] --apply
 """
 
 import argparse
@@ -80,6 +85,63 @@ def cmd_voices(args):
     list_voices(api_key)
 
 
+def _find_guide_pdf(campaign_id, base_dir):
+    """Locate the uploaded PDF for a library campaign via the FFG catalog."""
+    import re
+    from app import FFG_CAMPAIGN_GUIDES
+    for g in FFG_CAMPAIGN_GUIDES:
+        gid = re.sub(r"\s+", "_", re.sub(r"[^\w\s\-]", "", g["name"])).lower()[:60]
+        if gid == campaign_id:
+            return base_dir / "uploads" / g["url"].rsplit("/", 1)[-1]
+    return None
+
+
+def cmd_merge(args):
+    import shutil
+    import time
+    from merge import format_report, merge_campaign
+
+    base = Path(__file__).resolve().parent
+    data_path = base / "data" / f"{args.campaign_id}.json"
+    if not data_path.exists():
+        print(f"Error: campaign not found: {data_path}")
+        sys.exit(1)
+
+    pdf = Path(args.pdf) if args.pdf else _find_guide_pdf(args.campaign_id, base)
+    if not pdf or not pdf.exists():
+        print(f"Error: guide PDF not found{f' ({pdf})' if pdf else ''}; pass --pdf <path>")
+        sys.exit(1)
+
+    with open(data_path, encoding="utf-8") as f:
+        existing = json.load(f)
+    print(f"Extracting {pdf.name} …")
+    extracted = extract_sections(str(pdf))
+
+    audio_dir = base / "audio"
+    has_audio = lambda e: bool(e.get("audio_file")) and (audio_dir / e["audio_file"]).exists()
+    merged, report = merge_campaign(existing, extracted, has_audio)
+
+    print(format_report(report))
+    before = sum(len(s["entries"]) for s in existing)
+    after = sum(len(s["entries"]) for s in merged)
+    print(f"\nEntries: {before} → {after}")
+
+    if merged == existing:
+        print("No changes.")
+        return
+    if not args.apply:
+        print("\nDry run — nothing written. Re-run with --apply to save.")
+        return
+
+    backup_dir = base / "data" / "_backups"
+    backup_dir.mkdir(exist_ok=True)
+    backup = backup_dir / f"{args.campaign_id}-{time.strftime('%Y%m%d-%H%M%S')}.json"
+    shutil.copy2(data_path, backup)
+    with open(data_path, "w", encoding="utf-8") as f:
+        json.dump(merged, f, indent=2, ensure_ascii=False)
+    print(f"\nSaved {data_path.name} (backup: {backup.relative_to(base)})")
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="Arkham Horror LCG Campaign Guide → TTS Audio"
@@ -99,12 +161,18 @@ def main():
     p_voices = sub.add_parser("voices", help="List available ElevenLabs voices")
     p_voices.add_argument("--api-key", help="ElevenLabs API key (or set ELEVENLABS_API_KEY)")
 
+    p_merge = sub.add_parser("merge", help="Re-extract a library campaign and merge improvements in")
+    p_merge.add_argument("campaign_id", help="Campaign id (file name in data/ without .json)")
+    p_merge.add_argument("--pdf", help="Guide PDF (default: found in uploads/ via the FFG catalog)")
+    p_merge.add_argument("--apply", action="store_true", help="Write changes (default: dry run)")
+
     args = parser.parse_args()
 
     commands = {
         "extract": cmd_extract,
         "generate": cmd_generate,
         "voices": cmd_voices,
+        "merge": cmd_merge,
     }
     commands[args.command](args)
 
