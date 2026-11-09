@@ -26,6 +26,10 @@ settings.json           - ElevenLabs API key, voice ID, model ID
 requirements.txt        - Python dependencies (flask, pdfplumber, elevenlabs)
 requirements-dev.txt    - Adds pytest
 tests/                  - pytest suite (see Tests below); tests/fixtures/ holds saved ArkhamDB responses
+static/                 - Served by Flask at /static/: cthulhu-profile.png (selected-campaign head art), cthulhu-arms.svg (its tentacles)
+tools/cthulhu_svg.py    - Generates static/cthulhu-arms.svg (tapered tentacles with suckers and curls)
+tools/cutout_checkerboard.py - Removes a baked-in "transparency" checkerboard from generated art → real transparent PNG
+tools/art_src/          - Original head art (front + profile) the static PNG was cut from
 run.bat                 - Windows launcher
 CLAUDE.md               - This file (project context for Claude Code)
 ```
@@ -91,7 +95,10 @@ CLAUDE.md               - This file (project context for Claude Code)
 ### Frontend (`templates/index.html`)
 - Three tabs: Library, Import, Settings
 - **Library tab**: campaign sidebar (renameable, reorderable via drag-and-drop), scenario groups with collapsible subgroups, entry cards with inline audio player
-- **Campaigns**: renameable (pencil icon), drag-and-drop reordering, deleteable; display names and order stored in `_campaign_meta.json`
+- **Campaigns**: renameable (pencil icon), drag-and-drop reordering, deleteable; display names and order stored in `_campaign_meta.json`. The sidebar shows names only; the audio count is in the library toolbar
+- **Selected campaign marker**: the active row (70px tall) shows the painted side-view Cthulhu head (`static/cthulhu-profile.png`) emerging from the left edge (~30% clipped, full row height), with pulsing eye glows (positions are % of the image in `CTHULHU_ART`) and five tentacle arms inlined from `static/cthulhu-arms.svg`. Everything is clipped to the row (`.cthulhu-mark { overflow: hidden }`). Entrance animation (head rises, arms grow) plays only when switching campaigns (`no-grow` class on re-render); honours `prefers-reduced-motion`. To change the arms edit `ARMS` in `tools/cthulhu_svg.py` and run it; to re-cut art run `tools/cutout_checkerboard.py <src> static/cthulhu-profile.png`
+- **Play / Edit modes** (toolbar switch, remembered in localStorage `viewMode`): Play mode shows titles + play buttons only (row click plays, ¶ opens the text inline, editing tools/drag hidden); Edit mode shows all tools plus a 2-line text preview
+- **Act/agenda cards**: in Play mode, entries in `* Deck` subgroups with labels like `Agenda: Name (Front|Back)` (optionally `– Variant`) are grouped into one card tile per card (`parseCard`). When the front finishes playing the card flips to its back (`flippedCards`, kept until reload; "Reset cards" in the toolbar). In Edit mode backs are indented under their front with a "↳ flip side" marker
 - **Entries**: play/pause toggle button, drag handle, rename (pencil icon), expand/edit text (auto-saves on collapse or click-away), generate/regenerate audio, attach audio file (paperclip icon), info popover (timestamp + model), delete
 - **Subgroups**: collapsible (collapsed by default), renameable, deleteable, draggable for reordering within and across scenarios
 - **Groups (scenarios)**: renameable, deleteable, draggable for reordering, add-subgroup button — all action icons appear on hover only

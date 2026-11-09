@@ -1,2 +1,5 @@
 -r requirements.txt
 pytest
+# for tools/cutout_checkerboard.py
+numpy
+scipy
