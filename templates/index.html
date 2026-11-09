@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Arkham Horror TTS</title>
+<link href="https://fonts.googleapis.com/css2?family=UnifrakturMaguntia&family=Cormorant+Garamond:ital,wght@0,400;0,500;1,400;1,500&display=swap" rel="stylesheet">
 <style>
 :root {
   --bg: #1a1a2e;
@@ -24,7 +25,8 @@
 
 body {
   font-family: 'Segoe UI', system-ui, sans-serif;
-  background: var(--bg);
+  background: var(--bg) url('/background.jpg') no-repeat center center fixed;
+  background-size: cover;
   color: var(--text);
   height: 100vh;
   display: flex;
@@ -32,28 +34,30 @@ body {
 }
 
 header {
-  background: var(--bg2);
+  background: rgba(22, 33, 62, 0.92);
   border-bottom: 2px solid var(--accent2);
-  padding: 12px 24px;
+  padding: 0;
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  align-items: stretch;
   flex-shrink: 0;
 }
 
-header h1 {
-  font-size: 20px;
-  color: var(--accent);
-  letter-spacing: 2px;
-  font-weight: 600;
+.header-banner {
+  width: 260px;
+  display: block;
+  object-fit: cover;
+  flex-shrink: 0;
 }
 
 .credits-indicator {
   display: flex;
   align-items: center;
   gap: 10px;
-  font-size: 12px;
+  font-size: 11px;
   color: var(--text2);
+  width: 100%;
+  justify-content: flex-end;
+  padding-top: 2px;
 }
 
 .credits-bar {
@@ -76,10 +80,12 @@ header h1 {
 
 .tabs {
   display: flex;
+  flex-wrap: wrap;
   gap: 4px;
-  background: var(--bg);
-  border-radius: 6px;
-  padding: 3px;
+  padding: 12px 24px;
+  align-items: center;
+  flex: 1;
+  justify-content: flex-end;
 }
 
 .tab {
@@ -106,7 +112,7 @@ header h1 {
 
 .campaign-list {
   width: 260px;
-  background: var(--bg2);
+  background: rgba(22, 33, 62, 0.88);
   border-right: 1px solid var(--border);
   overflow-y: auto;
   flex-shrink: 0;
@@ -114,10 +120,10 @@ header h1 {
 
 .campaign-list h3 {
   padding: 16px;
-  font-size: 12px;
-  text-transform: uppercase;
+  font-size: 18px;
+  font-family: 'UnifrakturMaguntia', cursive;
   letter-spacing: 1px;
-  color: var(--text2);
+  color: var(--accent);
 }
 
 .campaign-item {
@@ -136,9 +142,12 @@ header h1 {
 .campaign-item .campaign-info { flex: 1; min-width: 0; }
 
 .campaign-item .name {
-  font-size: 14px;
+  font-size: 15px;
+  font-family: 'Cormorant Garamond', 'Palatino Linotype', 'Book Antiqua', Palatino, serif;
   font-weight: 500;
+  font-style: italic;
   margin-bottom: 4px;
+  color: var(--text);
 }
 
 .campaign-item .del-campaign-btn {
@@ -189,6 +198,7 @@ header h1 {
   flex: 1;
   overflow-y: auto;
   padding: 0;
+  background: rgba(26, 26, 46, 0.85);
 }
 
 .scenario-panel .empty {
@@ -583,7 +593,7 @@ body.is-dragging .scenario-header > * { pointer-events: none; }
 
 /* ── Audio Player Bar ── */
 .player-bar {
-  background: var(--bg2);
+  background: rgba(22, 33, 62, 0.92);
   border-top: 2px solid var(--accent2);
   padding: 10px 24px;
   display: flex;
@@ -794,6 +804,63 @@ input:focus { outline: none; border-color: var(--accent); }
   width: 0%;
 }
 
+/* ── Pack Picker ── */
+.pack-picker {
+  max-height: 260px;
+  overflow-y: auto;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+
+.pack-cycle-header {
+  padding: 6px 10px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  user-select: none;
+  border-bottom: 1px solid var(--border);
+}
+
+.pack-cycle-header:hover { background: var(--surface); }
+
+.pack-cycle-header input[type="checkbox"] {
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.pack-cycle-header .pack-arrow {
+  font-size: 8px;
+  transition: transform 0.2s;
+  color: var(--text2);
+}
+
+.pack-cycle-header.expanded .pack-arrow { transform: rotate(90deg); }
+
+.pack-cycle-packs { display: none; }
+.pack-cycle-packs.open { display: block; }
+
+.pack-cycle-packs label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px 4px 28px;
+  font-size: 12px;
+  color: var(--text2);
+  cursor: pointer;
+}
+
+.pack-cycle-packs label:hover { background: var(--surface); color: var(--text); }
+
+.pack-cycle-packs input[type="checkbox"] {
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
 /* ── Settings Tab ── */
 #settings-tab {
   flex-direction: column;
@@ -879,15 +946,15 @@ input:focus { outline: none; border-color: var(--accent); }
 <body>
 
 <header>
-  <h1>ARKHAM HORROR TTS</h1>
-  <div class="credits-indicator" id="creditsIndicator" title="ElevenLabs credits">
-    <div class="credits-bar"><div class="credits-fill" id="creditsFill"></div></div>
-    <span id="creditsText">--</span>
-  </div>
+  <img src="/banner.jpg" alt="Arkham Horror TTS" class="header-banner">
   <div class="tabs">
     <button class="tab active" data-tab="library-tab">Library</button>
     <button class="tab" data-tab="import-tab">Import</button>
     <button class="tab" data-tab="settings-tab">Settings</button>
+    <div class="credits-indicator" id="creditsIndicator" title="ElevenLabs credits">
+      <div class="credits-bar"><div class="credits-fill" id="creditsFill"></div></div>
+      <span id="creditsText">--</span>
+    </div>
   </div>
 </header>
 
@@ -941,24 +1008,7 @@ input:focus { outline: none; border-color: var(--accent); }
     </div>
 
     <div class="import-section">
-      <h2><span class="step-num">2</span> Generate Audio</h2>
-      <div class="form-row">
-        <div class="form-group">
-          <label>Campaign</label>
-          <select id="genCampaign" style="width:100%;padding:8px 12px;background:var(--bg);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:14px;">
-            <option value="">-- Select campaign --</option>
-          </select>
-        </div>
-        <button class="btn btn-primary" id="generateBtn" onclick="generateAudio()">Generate Audio</button>
-      </div>
-      <div class="gen-progress" id="genProgress" style="display:none;">
-        <div class="gen-progress-bar"><div class="gen-progress-fill" id="genProgressFill"></div></div>
-        <div class="status-msg" id="genStatus"></div>
-      </div>
-    </div>
-
-    <div class="import-section">
-      <h2><span class="step-num">3</span> Import Agenda/Act Cards from ArkhamDB</h2>
+      <h2><span class="step-num">2</span> Import Agenda/Act Cards from ArkhamDB</h2>
       <p style="font-size:13px;color:var(--text2);margin-bottom:12px;">Fetch agenda and act card flavor text from ArkhamDB and add them to an existing campaign.</p>
       <div class="form-row">
         <div class="form-group">
@@ -968,10 +1018,10 @@ input:focus { outline: none; border-color: var(--accent); }
           </select>
         </div>
         <div class="form-group">
-          <label>ArkhamDB Packs (hold Ctrl/Cmd to select multiple)</label>
-          <select id="arkhamdbPack" multiple size="8" style="width:100%;padding:4px;background:var(--bg);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:13px;">
-            <option value="">Loading packs...</option>
-          </select>
+          <label>ArkhamDB Packs</label>
+          <div id="arkhamdbPackList" class="pack-picker">
+            <div style="padding:8px;color:var(--text2);font-size:13px;">Loading packs...</div>
+          </div>
         </div>
         <button class="btn btn-primary" id="arkhamdbBtn" onclick="importFromArkhamDB()">Import Cards</button>
       </div>
@@ -1162,7 +1212,7 @@ function buildEntryWrapper(scenario, si, entry, ei) {
   wrapper.innerHTML = `
     <div class="entry-item" id="entry-${si}-${ei}">
       <span class="drag-handle" title="Drag to reorder">&#8942;&#8942;</span>
-      <button class="play-btn" ${hasAudio ? '' : 'disabled'} onclick="playEntry('${audioPath}', '${escAttr(entry.display_label)}', '${escAttr(scenario.scenario)}', '${si}-${ei}')">
+      <button class="play-btn" ${hasAudio ? '' : 'disabled'} onclick="playEntry('${escAttr(audioPath)}', '${escAttr(entry.display_label)}', '${escAttr(scenario.scenario)}', '${si}-${ei}')">
         &#9654;
       </button>
       <div class="entry-info">
@@ -2118,52 +2168,95 @@ async function refreshCampaignSelect() {
 }
 
 async function loadArkhamDBPacks() {
-  const sel = document.getElementById('arkhamdbPack');
-  if (sel.dataset.loaded) return;
-  sel.innerHTML = '<option value="">Loading packs...</option>';
+  var container = document.getElementById('arkhamdbPackList');
+  if (container.dataset.loaded) return;
+  container.innerHTML = '<div style="padding:8px;color:var(--text2);font-size:13px;">Loading packs...</div>';
   try {
-    const res = await fetch('/api/arkhamdb/packs');
-    const packs = await res.json();
+    var res = await fetch('/api/arkhamdb/packs');
+    var packs = await res.json();
     if (packs.error) throw new Error(packs.error);
-    sel.innerHTML = '';
+    container.innerHTML = '';
 
-    // Group by cycle
-    const groups = new Map();
-    packs.forEach(p => {
-      const cycle = p.cycle || 'Other';
+    var groups = new Map();
+    packs.forEach(function(p) {
+      var cycle = p.cycle || 'Other';
       if (!groups.has(cycle)) groups.set(cycle, []);
       groups.get(cycle).push(p);
     });
 
-    // Sort cycles by cycle_position
-    const sorted = [...groups.entries()].sort((a, b) => {
-      const posA = (a[1][0] && a[1][0].cycle_position) || 99;
-      const posB = (b[1][0] && b[1][0].cycle_position) || 99;
+    var sorted = Array.from(groups.entries()).sort(function(a, b) {
+      var posA = (a[1][0] && a[1][0].cycle_position) || 99;
+      var posB = (b[1][0] && b[1][0].cycle_position) || 99;
       return posA - posB;
     });
 
-    sorted.forEach(([cycleName, cyclePacks]) => {
-      const group = document.createElement('optgroup');
-      group.label = cycleName;
-      cyclePacks.forEach(p => {
-        const opt = document.createElement('option');
-        opt.value = p.code;
-        opt.textContent = p.name;
-        group.appendChild(opt);
+    sorted.forEach(function(entry) {
+      var cycleName = entry[0], cyclePacks = entry[1];
+      var cycleDiv = document.createElement('div');
+
+      var header = document.createElement('div');
+      header.className = 'pack-cycle-header';
+      var cycleCheckbox = document.createElement('input');
+      cycleCheckbox.type = 'checkbox';
+      var arrow = document.createElement('span');
+      arrow.className = 'pack-arrow';
+      arrow.innerHTML = '&#9654;';
+      var label = document.createElement('span');
+      label.textContent = cycleName + ' (' + cyclePacks.length + ')';
+      label.style.flex = '1';
+      header.appendChild(cycleCheckbox);
+      header.appendChild(arrow);
+      header.appendChild(label);
+
+      var packsDiv = document.createElement('div');
+      packsDiv.className = 'pack-cycle-packs';
+
+      cyclePacks.forEach(function(p) {
+        var lbl = document.createElement('label');
+        var cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.value = p.code;
+        cb.className = 'pack-checkbox';
+        cb.dataset.cycle = cycleName;
+        cb.addEventListener('change', function() {
+          var allInCycle = packsDiv.querySelectorAll('.pack-checkbox');
+          var allChecked = Array.from(allInCycle).every(function(c) { return c.checked; });
+          var anyChecked = Array.from(allInCycle).some(function(c) { return c.checked; });
+          cycleCheckbox.checked = allChecked;
+          cycleCheckbox.indeterminate = anyChecked && !allChecked;
+        });
+        lbl.appendChild(cb);
+        lbl.appendChild(document.createTextNode(p.name));
+        packsDiv.appendChild(lbl);
       });
-      sel.appendChild(group);
+
+      cycleCheckbox.addEventListener('change', function() {
+        var cbs = packsDiv.querySelectorAll('.pack-checkbox');
+        cbs.forEach(function(cb) { cb.checked = cycleCheckbox.checked; });
+        cycleCheckbox.indeterminate = false;
+      });
+
+      header.addEventListener('click', function(e) {
+        if (e.target === cycleCheckbox) return;
+        header.classList.toggle('expanded');
+        packsDiv.classList.toggle('open');
+      });
+
+      cycleDiv.appendChild(header);
+      cycleDiv.appendChild(packsDiv);
+      container.appendChild(cycleDiv);
     });
 
-    sel.dataset.loaded = 'true';
+    container.dataset.loaded = 'true';
   } catch (e) {
-    sel.innerHTML = '<option value="">Failed to load packs</option>';
+    container.innerHTML = '<div style="padding:8px;color:var(--danger);font-size:13px;">Failed to load packs</div>';
   }
 }
 
 async function importFromArkhamDB() {
-  const campaignId = document.getElementById('arkhamdbCampaign').value;
-  const sel = document.getElementById('arkhamdbPack');
-  const packCodes = Array.from(sel.selectedOptions).map(o => o.value).filter(v => v);
+  var campaignId = document.getElementById('arkhamdbCampaign').value;
+  var checkboxes = document.querySelectorAll('#arkhamdbPackList .pack-checkbox:checked');
+  var packCodes = Array.from(checkboxes).map(function(cb) { return cb.value; });
   const status = document.getElementById('arkhamdbStatus');
 
   if (!campaignId) {
@@ -2468,8 +2561,12 @@ async function loadCredits() {
     const fill = document.getElementById('creditsFill');
     fill.style.width = pct + '%';
     fill.className = 'credits-fill ' + (pct > 50 ? 'high' : pct > 20 ? 'medium' : 'low');
-    document.getElementById('creditsText').textContent = `${remaining.toLocaleString()} chars left`;
-    document.getElementById('creditsIndicator').title = `${data.tier} plan: ${data.character_count.toLocaleString()} / ${limit.toLocaleString()} characters used`;
+    var resetText = '';
+    if (data.days_until_reset !== null && data.days_until_reset !== undefined) {
+      resetText = ' | ' + data.days_until_reset + 'd to reset';
+    }
+    document.getElementById('creditsText').textContent = remaining.toLocaleString() + ' chars left' + resetText;
+    document.getElementById('creditsIndicator').title = data.tier + ' plan: ' + data.character_count.toLocaleString() + ' / ' + limit.toLocaleString() + ' characters used';
   } catch (e) {
     document.getElementById('creditsText').textContent = 'N/A';
   }

@@ -81,15 +81,19 @@ CLAUDE.md               - This file (project context for Claude Code)
   - After mutations, data re-fetched from server (`refreshAndRender()`) — no local state manipulation
 - Open/collapsed state of scenarios and subgroups preserved across re-renders via `getOpenState()`
 - **Audio player bar**: fixed at bottom, shows current track, progress bar with seek, play/pause
-- **Import tab**: FFG campaign guide download (auto-downloads from FFG CDN) or manual PDF upload, bulk audio generation with progress bar, ArkhamDB card import
-- **ArkhamDB import**: multi-select pack list grouped by campaign cycle (`<optgroup>`), packs cached locally with background refresh
+- **Import tab**: FFG campaign guide download (auto-downloads from FFG CDN) or manual PDF upload; ArkhamDB card import with cycle-based accordion pack picker
+- **ArkhamDB import**: accordion pack picker grouped by cycle with select-all cycle checkboxes; packs without agenda/act cards filtered out; imported Act/Agenda Deck subgroups auto-positioned before Resolutions
 - **Settings tab**: API key, voice ID, TTS model dropdown, save button
-- **Credits indicator**: in header, shows remaining characters with color-coded bar, refreshes every 60s and after generation
+- **Credits indicator**: below tab buttons, shows remaining characters with color-coded bar and days until reset countdown, refreshes every 60s and after generation
+- **Custom banner and background**: Banner5.jpg header image, Background.jpg full-page background with semi-transparent UI panels
+- **Entry text auto-save**: text saves automatically on collapse or click-away (no Save button needed)
 - **Confirmation modal**: used for all delete operations (campaigns, groups, subgroups, entries) with "Keep audio files on disk" checkbox (default: checked)
 
 ### ArkhamDB Integration
 - Packs cached locally at `data/_arkhamdb_packs.json` with cycle name and position
+- Packs without agenda/act cards filtered out via hardcoded exclude set (36 packs: investigator expansions, promos, books, starter decks)
 - Packs endpoint serves from cache instantly, refreshes in background thread
+- After import, Act/Agenda Deck subgroups reordered before Resolutions subgroup in each scenario
 - Cards fetched per-pack from `https://arkhamdb.com/api/public/cards/{pack_code}` (60s timeout)
 - Agenda/act cards: `flavor` = front read-aloud, `back_flavor` = back read-aloud
 - When `back_flavor` is empty, italic text extracted from `back_text` HTML via `<i>` tag parsing

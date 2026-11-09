@@ -172,6 +172,16 @@ def index():
     return render_template("index.html")
 
 
+@app.route("/banner.jpg")
+def serve_banner():
+    return send_from_directory(str(BASE_DIR), "Banner5.jpg")
+
+
+@app.route("/background.jpg")
+def serve_background():
+    return send_from_directory(str(BASE_DIR), "Background.jpg")
+
+
 @app.route("/api/library")
 def api_library():
     return jsonify(_get_campaigns())
@@ -963,11 +973,17 @@ def api_credits():
     try:
         with urllib.request.urlopen(req) as r:
             data = json.loads(r.read())
+            reset_unix = data.get("next_character_count_reset_unix")
+            days_left = None
+            if reset_unix:
+                import math
+                days_left = max(0, math.ceil((reset_unix - time.time()) / 86400))
             return jsonify({
                 "tier": data.get("tier"),
                 "character_limit": data.get("character_limit"),
                 "character_count": data.get("character_count"),
                 "remaining": data.get("character_limit", 0) - data.get("character_count", 0),
+                "days_until_reset": days_left,
             })
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -999,6 +1015,13 @@ def api_arkhamdb_packs():
         90: "Challenge Scenarios",
     }
 
+    packs_without_agenda_act = {
+        "promo", "books", "hoth", "iotv", "tdor", "tftbw", "tdg", "bob",
+        "nat", "har", "win", "jac", "ste", "rcore", "dre", "eoep", "tskp",
+        "otr", "blbe", "ptr", "dwlp", "ptcp", "tcup", "fhvp", "hfa", "tfap",
+        "pap", "tdep", "ticp", "aof", "tdcp", "tom", "car", "and", "mar", "mig",
+    }
+
     def build_pack_list(raw_packs):
         return [
             {
@@ -1008,6 +1031,7 @@ def api_arkhamdb_packs():
                 "cycle_position": p.get("cycle_position", 99),
             }
             for p in raw_packs
+            if p["code"] not in packs_without_agenda_act
         ]
 
     if cache_path.exists():
@@ -1159,6 +1183,23 @@ def api_arkhamdb_import(campaign_id):
                     "subgroup": f"{card_type} Deck",
                 })
                 added += 1
+
+    # Reorder entries so Act/Agenda Deck subgroups come before Resolutions
+    for scenario in data:
+        entries = scenario["entries"]
+        deck_entries = [e for e in entries if (e.get("subgroup") or "").endswith("Deck")]
+        other_entries = [e for e in entries if not (e.get("subgroup") or "").endswith("Deck")]
+        # Insert deck entries before the Resolutions subgroup
+        result = []
+        inserted = False
+        for e in other_entries:
+            if not inserted and e.get("subgroup") == "Resolutions":
+                result.extend(deck_entries)
+                inserted = True
+            result.append(e)
+        if not inserted:
+            result.extend(deck_entries)
+        scenario["entries"] = result
 
     with open(path, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2, ensure_ascii=False)

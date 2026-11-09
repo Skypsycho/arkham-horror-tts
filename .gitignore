@@ -5,5 +5,9 @@ uploads/
 settings.json
 data/*.json
 voice_sample_*.mp3
+Banner.jpg
+Banner2.jpg
+Banner3.jpg
+Banner4.jpg
 *.sections.json
 test_*.json
