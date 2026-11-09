@@ -22,7 +22,7 @@ Browse, organize, and play generated audio from a library interface — or attac
 ### Prerequisites
 
 - [Python 3.8+](https://www.python.org/downloads/) (on Windows, check "Add Python to PATH" during installation)
-- An [ElevenLabs](https://elevenlabs.io) API key (for TTS generation)
+- An [ElevenLabs](https://elevenlabs.io) API key (for TTS generation -- see [API Key Setup](#elevenlabs-api-key-setup) below)
 
 ### Installation
 
@@ -51,11 +51,26 @@ Open **http://localhost:5000** in your browser.
 
 On Windows, you can also double-click `run.bat` to install dependencies and start the app in one step.
 
+### ElevenLabs API Key Setup
+
+You need an ElevenLabs API key to generate audio. The free tier includes a limited number of characters per month.
+
+1. Create an account at [elevenlabs.io](https://elevenlabs.io)
+2. Go to **Profile + API key** (click your profile icon in the bottom-left, then "Profile + API key")
+3. Click **Create API Key**
+4. Give it a name (e.g., "Arkham TTS")
+5. Enable these permissions:
+   - **Text to Speech** -- required for audio generation
+   - **User Read** -- required for the credits/character usage indicator
+6. Copy the generated key
+
+To find a **Voice ID**: go to the [Voice Library](https://elevenlabs.io/voice-library), select a voice, click "Use Voice", then find the Voice ID in the voice settings panel.
+
 ### Configuration
 
 Go to the **Settings** tab in the app to enter your:
-- ElevenLabs API key
-- Voice ID
+- ElevenLabs API key (from the steps above)
+- Voice ID (from the voice settings panel)
 - TTS model (v4, v4 Turbo, v3, Multilingual v2, etc.)
 
 ## Usage
