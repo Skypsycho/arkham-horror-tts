@@ -600,9 +600,12 @@ body.is-dragging .scenario-header > * { pointer-events: none; }
   align-items: center;
   gap: 12px;
   padding: 10px 20px;
-  background: rgba(22, 33, 62, 0.96);
+  background: var(--bg2);
   border-bottom: 1px solid var(--border);
 }
+
+/* keep jumped-to scenarios clear of the sticky toolbar */
+.scenario-group { scroll-margin-top: 60px; }
 
 .library-toolbar .toolbar-title {
   flex: 1;
@@ -656,6 +659,7 @@ body.mode-play .subgroup-header .del-sg-btn,
 body.mode-play .add-subgroup-btn { display: none !important; }
 
 body.mode-play .text-btn { display: flex; }
+body.mode-edit .entry-actions .text-btn { display: none; }  /* ☰ does this in edit mode */
 
 body.mode-play .entry-item {
   padding: 8px 20px;
@@ -708,8 +712,9 @@ body.mode-edit .entry-wrapper.card-back .entry-info .label::before {
 
 .card-tile {
   display: flex;
+  flex-wrap: wrap;   /* side buttons drop below the name when space runs out */
   align-items: center;
-  gap: 14px;
+  gap: 10px 14px;
   padding: 10px 20px;
 }
 
@@ -749,7 +754,7 @@ body.mode-edit .entry-wrapper.card-back .entry-info .label::before {
 .card-icon-face.front { background: var(--bg3); color: var(--accent); }
 .card-icon-face.back { background: var(--accent2); color: #fff; transform: rotateY(180deg); }
 
-.card-title { flex: 1; min-width: 0; }
+.card-title { flex: 1 1 180px; min-width: 180px; }
 
 .card-title .card-type {
   font-size: 10px;
@@ -767,7 +772,8 @@ body.mode-edit .entry-wrapper.card-back .entry-info .label::before {
   text-overflow: ellipsis;
 }
 
-.card-sides { display: flex; gap: 8px; flex-shrink: 0; flex-wrap: wrap; justify-content: flex-end; }
+/* buttons stay together as one row; the row moves under the name if needed */
+.card-sides { display: flex; gap: 8px; align-items: center; flex-wrap: nowrap; margin-left: auto; }
 
 .card-side {
   display: flex;
@@ -1575,8 +1581,7 @@ function buildCardTile(scenario, si, card) {
         <div class="card-type">${escHtml(card.type)}</div>
         <div class="card-name" title="${escAttr(card.name)}">${escHtml(card.name)}</div>
       </div>
-      <div class="card-sides">${sides}</div>
-      <button class="text-btn" title="Show / edit text">&#182;</button>
+      <div class="card-sides">${sides}<button class="text-btn" title="Show / edit text">&#182;</button></div>
     </div>
     ${all.map(s => buildExpandedHtml(si, s.ei, s.entry,
         s.entry.display_label.match(/\((Front|Back)\)$/)[1] + (s.variant ? ` · ${s.variant}` : ''))).join('')}
