@@ -1,0 +1,110 @@
+[
+ {
+  "code": "04205",
+  "name": "Heart of the Elders",
+  "type_code": "scenario",
+  "position": 205,
+  "encounter_code": "heart_of_the_elders",
+  "encounter_name": "Heart of the Elders",
+  "flavor": null,
+  "back_flavor": null,
+  "back_text": "Hard / Expert\n[skull]: -2 (-4 instead if you are in a [[Cave]] location).\n[cultist]: -3. If you fail, place 1 doom on your location.\n[tablet]: -3. If you are poisoned, this test automatically fails instead. If you are not poisoned and you fail, put a set-aside Poisoned weakness into play in your threat area.\n[elder_thing]: -4. If you fail, take 1 horror.",
+  "stage": null
+ },
+ {
+  "code": "04207",
+  "name": "The Jungle's Heart",
+  "type_code": "agenda",
+  "position": 207,
+  "encounter_code": "pillars_of_judgment",
+  "encounter_name": "Pillars of Judgment",
+  "flavor": "You are deep in the jungle now, surrounded on all sides by the uncharted wilderness. All around you, the rainforest sings, its lyrics found in every chirping insect, every serpent’s hiss, every snapping tree branch.",
+  "back_flavor": "After exploring the rainforest for hours, you reach the top of a steep ridge, from which you can see much of the surrounding area. Uncanny winged creatures caw at you from above, circling over the cavern entrance like vultures waiting for their meal. From this vantage point, you may be able to see approaching threats as they traverse the brush below. If only you had something to help you see farther…",
+  "back_text": "Shuffle the encounter discard pile into the encounter deck.\nThe lead investigator chooses one investigator to be the group's lookout. That investigator checks his or her supplies.\nIf the lookout has binoculars, he or she is able to see the creature approaching and avoid it. The lookout suffers no ill effects.\nIf the lookout does not have binoculars, discard cards from the top of the encounter deck until an enemy is discarded. Spawn that enemy at the lookout's location.",
+  "stage": 1
+ },
+ {
+  "code": "04208",
+  "name": "Setting Sun",
+  "type_code": "agenda",
+  "position": 208,
+  "encounter_code": "pillars_of_judgment",
+  "encounter_name": "Pillars of Judgment",
+  "flavor": "The day advances quickly. Through the thick canopy of trees, you can tell that the sun is starting to sink closer to the horizon. To the east, the sky grows dim. Soon the jungle will be covered in darkness, and you will have to stop and make camp for the night.",
+  "back_flavor": "Night comes swiftly, blanketing the rainforest in dim moonlight. The sounds of the jungle change as nocturnal creatures start to emerge. Soon, the air is filled with the buzzing and chirping of strange insects and even stranger beasts, the identity of which you are unable to determine.\nThe dangers of nighttime are too great to ignore, and the darkness makes it difficult for you to study the glyphs and patterns necessary to shift the pillars correctly. You have no choice but to set up camp and continue your exploration in the morning.",
+  "back_text": "Each surviving investigator immediately resigns.",
+  "stage": 2
+ },
+ {
+  "code": "04209",
+  "name": "Search for the Pattern",
+  "type_code": "act",
+  "position": 209,
+  "encounter_code": "pillars_of_judgment",
+  "encounter_name": "Pillars of Judgment",
+  "flavor": "Six stone pillars surround the entrance to the cavern, each carved with a series of uncanny grooves and hieroglyphs that form an intricate pattern. Touching them causes the grooves to glow brightly, and twisting them causes the patterns to shift and change. Perhaps these patterns match the glyphs found in other regions of the jungle?",
+  "back_flavor": null,
+  "back_text": null,
+  "stage": 1
+ },
+ {
+  "code": "04210",
+  "name": "Opening the Maw",
+  "type_code": "act",
+  "position": 210,
+  "encounter_code": "pillars_of_judgment",
+  "encounter_name": "Pillars of Judgment",
+  "flavor": "You have discovered that the ruins within the jungle each bear a distinct pattern of glyphs, which match those found on the six pillars. As you turn the pillars to match these patterns, a serpentine creature descends from the clouds…",
+  "back_flavor": "With a deep rumbling that shakes the ground outside, something inside the cavern shifts. In a distinct sequence, the six obelisks slowly descend into the ground, twisting and turning. The serpent creature that guarded the cavern lets out a shriek of anger and hate before flying off and vanishing behind the treeline. One by one, the stone pillars disappear into the dirt, and the Earth stops shaking.",
+  "back_text": "<b>(→R1)</b>",
+  "stage": 2
+ },
+ {
+  "code": "04211",
+  "name": "The Lonely Caverns",
+  "type_code": "agenda",
+  "position": 211,
+  "encounter_code": "knyan",
+  "encounter_name": "K'n-yan",
+  "flavor": "Though much of this cavern system is natural and untouched by humans, you are stunned to find signs of an ancient civilization that once inhabited the area.",
+  "back_flavor": null,
+  "back_text": "<b>Check Campaign Log. <i>If the Harbinger is still alive:</i></b>\n<blockquote><i>From the entrance far behind you, a threatening hiss and an all-too-familiar rattling causes you to freeze in terror. You grip the nearest weapon you can find and turn in fright, hands trembling. How has it followed you this far? When will this awful hunt end?</i></blockquote>\nSearch the collection for the Harbinger of Valusia and spawn it at the location farthest from all investigators (if there are 8 or more tally marks under \"Yig's Fury\" in your Campaign Log, it enters play at the lead investigator's location, instead). It enters play with damage on it equal to the amount of damage recorded in parentheses in your Campaign Log.",
+  "stage": 1
+ },
+ {
+  "code": "04212",
+  "name": "Eyes in the Dark",
+  "type_code": "agenda",
+  "position": 212,
+  "encounter_code": "knyan",
+  "encounter_name": "K'n-yan",
+  "flavor": "Bright-yellow eyes peer at you from all sides as you continue delving deeper into the cavern. The glowing orbs vanish as light is cast on them, reappearing as soon as the darkness returns.",
+  "back_flavor": "Without warning, a deafening crash echoes throughout the cave, and the ground under your feet rumbles with tremendous force. Stalactites and pieces of crumbling rock begin to fall from the ceiling of the cavern, striking the ground all around you and causing cracks to appear in the stone. \"We have to get out of here!\" you shout to Ichtaca, but by the time you realize what is coming, it is too late. The ground beneath your feet gives way, and suddenly you are falling, plummeting into the depths below…",
+  "back_text": "Each surviving investigator is defeated and suffers 1 physical trauma.",
+  "stage": 2
+ },
+ {
+  "code": "04213",
+  "name": "Cavern of the Forgotten Age",
+  "type_code": "act",
+  "position": 213,
+  "encounter_code": "knyan",
+  "encounter_name": "K'n-yan",
+  "flavor": "The vast underground caverns of K’n-yan are cold and all too quiet. Scattered, forsaken ruins lie undisturbed along your path to the Nexus of N’kai. What happened in this ancient and forgotten place? Were these ruins once occupied by humans? Or by a species far, far older?",
+  "back_flavor": "With very few landmarks to spot along the dark and lonely tunnels, you must rely on your wits and navigation skills to make your way forward without getting lost. If only you had an easy way to mark the places you have already visited…",
+  "back_text": "Shuffle Descent to Yoth into the exploration deck.\nThe lead investigator chooses one investigator to be the group's scout. That investigator checks his or her supplies.\nIf the scout has chalk, you are able to avoid traveling in circles. The scout suffers no ill effects.\nIf the scout does not have chalk, place 1 clue on each location in play (<i>from the token pool</i>). Then, if the scout is on a single-sided location, shuffle that location back into the exploration deck. Move each enemy and investigator that was at that location to a connecting location nearest to the Mouth of K'n-yan.",
+  "stage": 1
+ },
+ {
+  "code": "04214",
+  "name": "Descent into Dark",
+  "type_code": "act",
+  "position": 214,
+  "encounter_code": "knyan",
+  "encounter_name": "K'n-yan",
+  "flavor": "The deeper you descend into the cold darkness, the more you feel the crushing weight of the world above, and the dizzying reality of the world further below. You suddenly long for the surface and wonder if you will ever see the sky again.",
+  "back_flavor": "Before you lies an ornate and elaborately decorated doorway, a stone disc that has been rolled aside to unveil the hellish realm beyond. The caverns on the other side are bathed in a red glow. The serpent-themed statues and carvings along the walls inform you that you are on the right track.",
+  "back_text": "Check Campaign Log.\n- <i>If the investigators rescued Alejandro:</i> <b>(→R1)</b>.\n- <i>If Alejandro is missing:</i> <b>(→R2)</b>.",
+  "stage": 2
+ }
+]

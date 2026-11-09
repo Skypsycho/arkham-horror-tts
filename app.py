@@ -35,6 +35,15 @@ generation_jobs = {}
 
 AUDIO_EXTENSIONS = {'.mp3', '.wav', '.m4a', '.ogg'}
 
+# ArkhamDB encounter codes whose names don't appear in the campaign guide's
+# scenario title. Values are matched against scenario names the same way
+# encounter codes are (underscores and punctuation ignored).
+ENCOUNTER_ALIASES = {
+    # The Forgotten Age — Heart of the Elders is split into two parts
+    "pillars_of_judgment": "heart_of_the_elders_part_1",
+    "knyan": "heart_of_the_elders_part_2",
+}
+
 
 def _sanitize_for_path(name):
     name = re.sub(r'[<>:"/\\|?*]', '', name)
@@ -1122,19 +1131,57 @@ def api_arkhamdb_import(campaign_id):
         return cleaned
 
     def match_scenario(encounter_code):
-        enc_clean = encounter_code.replace("_", "").lower()
+        if not encounter_code:
+            return None
+        enc_clean = re.sub(r"[^a-z0-9]", "", encounter_code.lower())
         for name, idx in existing_scenarios.items():
             name_clean = re.sub(r"[^a-z0-9]", "", name)
             if enc_clean in name_clean or name_clean in enc_clean:
                 return idx
         return None
 
+    # Fallback for sub-encounter sets (e.g. Black Stars Rise's "vortex" and
+    # "flood" agendas): if the pack has exactly one scenario card, unmatched
+    # cards belong to that scenario.
+    scenario_codes = {c.get("encounter_code") for c in cards
+                      if c.get("type_code") == "scenario" and c.get("encounter_code")}
+    pack_scenario_code = next(iter(scenario_codes)) if len(scenario_codes) == 1 else None
+
+    def resolve_scenario(encounter_code):
+        alias = ENCOUNTER_ALIASES.get(encounter_code)
+        if alias:
+            si = match_scenario(alias)
+            if si is not None:
+                return si
+        si = match_scenario(encounter_code)
+        if si is None and pack_scenario_code:
+            si = match_scenario(pack_scenario_code)
+        return si
+
+    # Some packs have several cards sharing one name (alternate agenda decks).
+    # Those need a suffix to stay distinct — but only on the side whose text
+    # actually differs between the copies.
+    by_name = {}
+    for c in agenda_act:
+        by_name.setdefault((c["type_code"], c["name"]), []).append(c)
+
+    def card_sides(c):
+        front = clean_html(c.get("flavor", ""))
+        back = clean_html(c.get("back_flavor", "")) or extract_italic_from_html(c.get("back_text", ""))
+        return front, back
+
+    def needs_suffix(card, side):
+        twins = by_name[(card["type_code"], card["name"])]
+        if len(twins) < 2:
+            return False
+        return len({card_sides(t)[side] for t in twins}) > 1
+
     added = 0
     skipped = 0
     for card in agenda_act:
         card_type = card["type_code"].title()
         enc = card.get("encounter_code", "")
-        si = match_scenario(enc)
+        si = resolve_scenario(enc)
 
         if si is None:
             scenario_name = enc.replace("_", " ").title()
@@ -1146,43 +1193,35 @@ def api_arkhamdb_import(campaign_id):
             si = len(data) - 1
             existing_scenarios[scenario_name.lower().replace(" ", "")] = si
 
-        front_flavor = clean_html(card.get("flavor", ""))
-        back_flavor = clean_html(card.get("back_flavor", ""))
-        if not back_flavor:
-            back_flavor = extract_italic_from_html(card.get("back_text", ""))
+        front_flavor, back_flavor = card_sides(card)
 
         sanitized = re.sub(r"[^\w\s\-]", "", card["name"])
         sanitized = re.sub(r"\s+", "_", sanitized).lower()[:60]
+        enc_name = card.get("encounter_name") or enc.replace("_", " ").title()
 
         existing_labels = {e["label"] for e in data[si]["entries"]}
 
-        front_label = f"{card_type.lower()}_{sanitized}_front"
-        if front_flavor and len(front_flavor) > 20:
-            if front_label in existing_labels:
-                skipped += 1
+        for side, side_name, text in ((0, "front", front_flavor), (1, "back", back_flavor)):
+            if not text or len(text) <= 20:
+                continue
+            if needs_suffix(card, side):
+                label = f"{card_type.lower()}_{sanitized}_{enc}_{side_name}"
+                display = f"{card_type}: {card['name']} – {enc_name} ({side_name.title()})"
             else:
-                data[si]["entries"].append({
-                    "label": front_label,
-                    "display_label": f"{card_type}: {card['name']} (Front)",
-                    "text": front_flavor,
-                    "page": 0,
-                    "subgroup": f"{card_type} Deck",
-                })
-                added += 1
-
-        back_label = f"{card_type.lower()}_{sanitized}_back"
-        if back_flavor and len(back_flavor) > 20:
-            if back_label in existing_labels:
+                label = f"{card_type.lower()}_{sanitized}_{side_name}"
+                display = f"{card_type}: {card['name']} ({side_name.title()})"
+            if label in existing_labels:
                 skipped += 1
-            else:
-                data[si]["entries"].append({
-                    "label": back_label,
-                    "display_label": f"{card_type}: {card['name']} (Back)",
-                    "text": back_flavor,
-                    "page": 0,
-                    "subgroup": f"{card_type} Deck",
-                })
-                added += 1
+                continue
+            data[si]["entries"].append({
+                "label": label,
+                "display_label": display,
+                "text": text,
+                "page": 0,
+                "subgroup": f"{card_type} Deck",
+            })
+            existing_labels.add(label)
+            added += 1
 
     # Reorder entries so Act/Agenda Deck subgroups come before Resolutions
     for scenario in data:
