@@ -110,7 +110,7 @@ CLAUDE.md               - This file (project context for Claude Code)
 - Credits indicator via ElevenLabs `/v1/user/subscription` endpoint (requires `user_read` API key permission)
 
 ### Frontend (`templates/index.html`)
-- Three tabs: Library, Import, Settings
+- Three tabs: Library, Import, Settings; an "i" button after them opens the help dialog (`#helpDialog`, native `<dialog>`). Update its text when the UI changes
 - **Library tab**: campaign sidebar (renameable, reorderable via drag-and-drop), scenario groups with collapsible subgroups, entry cards with inline audio player
 - **Campaigns**: renameable (pencil icon), drag-and-drop reordering, deleteable; display names and order stored in `_campaign_meta.json`. The sidebar shows names only; the audio count is in the library toolbar
 - **Selected campaign marker**: the active row (70px tall) shows the painted side-view Cthulhu head (`static/cthulhu-profile.png`) emerging from the left edge (1.5× the row height with the crown and eyes in view, shoulders cut off below, ~35% past the left edge), with pulsing eye glows (positions are % of the image in `CTHULHU_ART`) and five tentacle arms inlined from `static/cthulhu-arms.svg`. Everything is clipped to the row (`.cthulhu-mark { overflow: hidden }`). Entrance animation (head rises, arms grow) plays only when switching campaigns (`no-grow` class on re-render); honours `prefers-reduced-motion`. To change the arms edit `ARMS` in `tools/cthulhu_svg.py` and run it; to re-cut art run `tools/cutout_checkerboard.py <src> static/cthulhu-profile.png`
@@ -129,6 +129,7 @@ CLAUDE.md               - This file (project context for Claude Code)
 - **ArkhamDB import**: accordion pack picker grouped by cycle with select-all cycle checkboxes; packs without agenda/act cards filtered out; imported Act/Agenda Deck subgroups auto-positioned before Resolutions
 - **Settings tab**: API key, voice ID, TTS model dropdown, save button
 - **Credits indicator**: below tab buttons, shows remaining characters with color-coded bar and days until reset countdown, refreshes every 60s and after generation
+- **Old-browser support (Tabletop Simulator tablet = Chrome 74)**: avoid CSS newer than Chrome 74 without a fallback line first (`min()`/`max()`/`clamp()`, `inset`, `aspect-ratio`, `color-mix()`, `:focus-visible` inside a selector list) and JS newer than ES2019 (`?.`, `??`, `replaceAll`, `.at()`). Flex `gap` is unsupported there: `flexGapFallback()` at the top of the script detects it and re-applies gaps as child margins (`data-gap-fix`). The header banner sits in an absolutely-filled wrapper so it can't set the header's height
 - **Custom banner and background**: Banner5.jpg header image, Background.jpg full-page background with semi-transparent UI panels
 - **Entry text auto-save**: text saves automatically on collapse or click-away (no Save button needed)
 - **Confirmation modal**: used for all delete operations (campaigns, groups, subgroups, entries) with "Keep audio files on disk" checkbox (default: checked)

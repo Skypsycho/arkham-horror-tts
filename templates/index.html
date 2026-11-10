@@ -42,11 +42,19 @@ header {
   flex-shrink: 0;
 }
 
-.header-banner {
+.header-banner-wrap {
+  position: relative;
   width: 260px;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+.header-banner {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%;
+  height: 100%;
   display: block;
   object-fit: cover;
-  flex-shrink: 0;
 }
 
 .credits-indicator {
@@ -163,7 +171,7 @@ header {
     radial-gradient(ellipse 60px 46px at 12px 55%, rgba(60, 200, 140, .18), transparent 70%),
     var(--bg3);
 }
-.cthulhu-mark { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+.cthulhu-mark { position: absolute; top: 0; right: 0; bottom: 0; left: 0; pointer-events: none; overflow: hidden; }
 .cthulhu-mark .cth-arms { position: absolute; left: 0; top: 0; width: 260px; height: 70px; }
 .cthulhu-mark .cth-skin { fill: url(#cthArm); stroke: #3f8f74; stroke-width: .6; stroke-opacity: .55; filter: url(#cthFlesh); }
 .cthulhu-mark .cth-cups circle { fill: #10171a; stroke: #9fb3a6; stroke-width: .35; stroke-opacity: .7; }
@@ -182,7 +190,7 @@ header {
   animation: cthRise .7s cubic-bezier(.2,.8,.2,1) both, cthBreathe 6s ease-in-out .7s infinite; }
 .cthulhu-mark .cth-art img { display: block; height: 100%; width: auto;
   filter: drop-shadow(0 0 6px rgba(0, 0, 0, .6)); }
-.cthulhu-mark .cth-art { aspect-ratio: 293 / 320; }
+.cthulhu-mark .cth-art { width: 96px; aspect-ratio: 293 / 320; }  /* 105px tall × 293/320; width for browsers without aspect-ratio */
 /* eye glow: pulsing light over the painted eyes */
 .cthulhu-mark .cth-eye-glow { position: absolute; width: 10px; height: 10px; margin: -5px 0 0 -5px; border-radius: 50%;
   background: radial-gradient(circle, rgba(255, 120, 60, .95), rgba(255, 40, 20, .35) 45%, transparent 70%);
@@ -876,6 +884,7 @@ body.mode-edit .entry-wrapper.card-back .entry-info .label::before {
 
 .ps-decks {
   display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));  /* older browsers */
   grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr));
   gap: 24px;
   max-width: 820px;
@@ -884,6 +893,7 @@ body.mode-edit .entry-wrapper.card-back .entry-info .label::before {
 
 .deck-card {
   --tint: #7a2a2a;
+  --tint-soft: rgba(122, 42, 42, 0.35);
   position: relative;
   min-height: 340px;
   display: flex;
@@ -892,14 +902,14 @@ body.mode-edit .entry-wrapper.card-back .entry-info .label::before {
   border: 2px solid var(--tint);
   border-radius: 14px;
   background:
-    linear-gradient(180deg, color-mix(in srgb, var(--tint) 35%, transparent), transparent 45%),
+    linear-gradient(180deg, var(--tint-soft), transparent 45%),
     var(--bg2);
   box-shadow: 0 6px 24px rgba(0,0,0,0.45);
 }
-.deck-card.act { --tint: #2f5d7a; }
+.deck-card.act { --tint: #2f5d7a; --tint-soft: rgba(47, 93, 122, 0.35); }
 .deck-card.back {
   background:
-    linear-gradient(0deg, color-mix(in srgb, var(--tint) 35%, transparent), transparent 55%),
+    linear-gradient(0deg, var(--tint-soft), transparent 55%),
     var(--surface);
 }
 .deck-card.flip-in { animation: dc-flip 0.35s ease-out; }
@@ -1289,6 +1299,94 @@ input:focus { outline: none; border-color: var(--accent); }
   color: #fff;
 }
 
+/* ── Help ── */
+.help-btn {
+  width: 30px;
+  height: 30px;
+  margin-left: 6px;
+  border-radius: 50%;
+  border: 1px solid var(--accent2);
+  background: transparent;
+  color: var(--accent);
+  font-family: Georgia, 'Times New Roman', serif;
+  font-style: italic;
+  font-weight: 700;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.help-btn:hover { background: var(--accent2); color: #fff; }
+.help-btn:focus-visible { background: var(--accent2); color: #fff; outline: none; }
+
+.help-dialog {
+  width: 680px;
+  max-width: calc(100vw - 32px);
+  max-height: 85vh;
+  margin: auto;
+  padding: 0;
+  border: 1px solid var(--accent2);
+  border-radius: 12px;
+  background: var(--bg2);
+  color: var(--text);
+  box-shadow: 0 12px 48px rgba(0,0,0,0.6);
+  overflow: hidden;
+}
+.help-dialog[open] { display: flex; flex-direction: column; }
+.help-dialog::backdrop { background: rgba(0,0,0,0.6); }
+
+.help-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 22px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+.help-head h2 {
+  font-family: 'Cormorant Garamond', 'Palatino Linotype', Palatino, serif;
+  font-size: 24px;
+  font-weight: 500;
+  color: var(--accent);
+}
+.help-close {
+  width: 30px; height: 30px; border-radius: 50%;
+  border: 1px solid var(--border); background: transparent; color: var(--text2);
+  cursor: pointer; font-size: 13px; flex-shrink: 0;
+}
+.help-close:hover { color: var(--text); border-color: var(--accent2); }
+
+.help-body { padding: 18px 22px 24px; overflow-y: auto; font-size: 14px; line-height: 1.6; color: var(--text2); }
+.help-body .help-lead { color: var(--text); font-size: 15px; }
+.help-body h3 {
+  margin: 22px 0 8px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.help-body ol, .help-body ul { padding-left: 20px; }
+.help-body li { margin-bottom: 6px; }
+.help-body li::marker { color: var(--accent2); }
+.help-body strong { color: var(--text); font-weight: 600; }
+.help-key {
+  display: inline-block;
+  padding: 0 7px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 12px;
+  line-height: 1.6;
+  white-space: nowrap;
+}
+
+@media (max-width: 700px) {
+  .help-head, .help-body { padding-left: 16px; padding-right: 16px; }
+}
+
 /* ── Confirmation Modal ── */
 .modal-overlay {
   display: none;
@@ -1354,11 +1452,12 @@ input:focus { outline: none; border-color: var(--accent); }
 <body>
 
 <header>
-  <img src="/banner.jpg" alt="Arkham Horror TTS" class="header-banner">
+  <div class="header-banner-wrap"><img src="/banner.jpg" alt="Arkham Horror TTS" class="header-banner"></div>
   <div class="tabs">
     <button class="tab active" data-tab="library-tab">Library</button>
     <button class="tab" data-tab="import-tab">Import</button>
     <button class="tab" data-tab="settings-tab">Settings</button>
+    <button class="help-btn" id="helpBtn" title="What is this app and how do I use it?" aria-label="Help" aria-haspopup="dialog">i</button>
     <div class="credits-indicator" id="creditsIndicator" title="ElevenLabs credits">
       <div class="credits-bar"><div class="credits-fill" id="creditsFill"></div></div>
       <span id="creditsText">--</span>
@@ -1487,6 +1586,53 @@ input:focus { outline: none; border-color: var(--accent); }
 
 <audio id="audioEl"></audio>
 
+<!-- Help -->
+<dialog class="help-dialog" id="helpDialog" aria-labelledby="helpTitle">
+  <div class="help-head">
+    <h2 id="helpTitle">How this app works</h2>
+    <button class="help-close" id="helpClose" aria-label="Close help" title="Close (Esc)">&#10005;</button>
+  </div>
+  <div class="help-body">
+    <p class="help-lead">Arkham Horror TTS turns the read-aloud text of <em>Arkham Horror: The Card Game</em> campaign guides into narrated audio. It covers intros, resolutions, interludes, and the flavour text on agenda and act cards. You can play it at the table instead of reading it out yourself.</p>
+
+    <h3>Getting started</h3>
+    <ol>
+      <li><strong>Settings:</strong> enter your ElevenLabs API key and a voice ID, and choose a voice model.</li>
+      <li><strong>Import → Download from FFG:</strong> pick a campaign. The app downloads the official guide PDF and pulls out every read-aloud passage, grouped by scenario. You can also upload a PDF yourself.</li>
+      <li><strong>Import → ArkhamDB cards:</strong> select the campaign's packs to add the agenda and act card texts (front and back) to each scenario.</li>
+      <li><strong>Check the text before generating audio.</strong> Generation uses ElevenLabs credits, so make sure the passages read right first.</li>
+      <li>Generate audio in the Library (Edit mode) with each entry's <span class="help-key">&#9889; Generate audio</span> button.</li>
+    </ol>
+
+    <h3>Library: Play mode (at the table)</h3>
+    <ul>
+      <li>Pick a campaign on the left, then a scenario from the list.</li>
+      <li><strong>Intro:</strong> the big button at the top plays the scenario's opening text.</li>
+      <li><strong>Agenda and Act cards</strong> show the card you're on. Press <span class="help-key">&#9654;</span> to hear the front, <span class="help-key">Flip to back &#8250;</span> when the card advances, then <span class="help-key">&#9654;</span> again and <span class="help-key">Next card &#8250;</span>. Use <span class="help-key">&#8249;</span> to step back if you went too far.</li>
+      <li>Each scenario remembers where its decks are, even after closing the browser. <span class="help-key">Reset decks</span> starts them over.</li>
+      <li><strong>Resolutions</strong> and other passages are listed below the cards.</li>
+      <li><span class="help-key">&#8249; Previous</span> / <span class="help-key">Next &#8250;</span> move between scenarios. <span class="help-key">&#8249; Scenarios</span> goes back to the list.</li>
+      <li><span class="help-key">&#182;</span> shows the text, so you can read along.</li>
+    </ul>
+
+    <h3>Library: Edit mode (preparing a campaign)</h3>
+    <ul>
+      <li>Switch with the <span class="help-key">Play / Edit</span> toggle above the scenarios.</li>
+      <li>Click an entry's text to correct it. It saves when you click away.</li>
+      <li><span class="help-key">&#9998;</span> renames entries, scenarios and groups. Drag the handles to reorder or move entries between scenarios.</li>
+      <li><span class="help-key">&#9889;</span> generates audio for one entry, <span class="help-key">&#8635;</span> regenerates it, and <span class="help-key">&#128206;</span> attaches your own recording instead.</li>
+      <li>Deleting asks first, and keeps the audio files by default.</li>
+    </ul>
+
+    <h3>Good to know</h3>
+    <ul>
+      <li>The bar at the top right shows your remaining ElevenLabs characters and when they reset.</li>
+      <li>The player at the bottom shows what's playing. Click its progress bar to jump.</li>
+      <li>Only you can log in. <span class="help-key">Log out</span> is next to the credits bar.</li>
+    </ul>
+  </div>
+</dialog>
+
 <!-- Confirmation Modal -->
 <div class="modal-overlay" id="confirmModal">
   <div class="modal">
@@ -1504,6 +1650,63 @@ input:focus { outline: none; border-color: var(--accent); }
 </div>
 
 <script>
+// Older browsers (e.g. Tabletop Simulator's tablet, Chrome 74) ignore `gap`
+// on flex layouts. There, read each flex container's gap and apply it to its
+// children as margins instead. Modern browsers skip all of this.
+(function flexGapFallback() {
+  const probe = document.createElement('div');
+  probe.style.cssText = 'display:flex;flex-direction:column;row-gap:1px;position:absolute;visibility:hidden';
+  probe.appendChild(document.createElement('div'));
+  probe.appendChild(document.createElement('div'));
+  document.body.appendChild(probe);
+  const supported = probe.scrollHeight === 1;
+  probe.parentNode.removeChild(probe);
+  if (supported) return;
+  document.documentElement.classList.add('no-flex-gap');
+
+  const px = v => parseFloat(v) || 0;
+  const SIDES = ['marginLeft', 'marginTop', 'marginBottom'];
+  function applyTo(container) {
+    const cs = getComputedStyle(container);
+    if (cs.display !== 'flex' && cs.display !== 'inline-flex') return;
+    const colGap = px(cs.columnGap), rowGap = px(cs.rowGap);
+    if (!colGap && !rowGap) return;
+    const isRow = cs.flexDirection.indexOf('row') === 0;
+    const wraps = cs.flexWrap !== 'nowrap';
+    let first = true;
+    Array.prototype.forEach.call(container.children, child => {
+      // undo what we set last time, then re-apply (visibility may have changed)
+      if (child.dataset.gapFix) {
+        SIDES.forEach(side => { child.style[side] = ''; });
+        delete child.dataset.gapFix;
+      }
+      const ccs = getComputedStyle(child);
+      if (ccs.display === 'none' || ccs.position === 'absolute' || ccs.position === 'fixed') return;
+      const set = {};
+      if (isRow) {
+        if (!first && colGap && !px(ccs.marginLeft)) set.marginLeft = colGap + 'px';
+        if (wraps && rowGap && !px(ccs.marginBottom)) set.marginBottom = rowGap + 'px';
+      } else if (!first && rowGap && !px(ccs.marginTop)) {
+        set.marginTop = rowGap + 'px';
+      }
+      Object.keys(set).forEach(side => { child.style[side] = set[side]; });
+      if (Object.keys(set).length) child.dataset.gapFix = '1';
+      first = false;
+    });
+  }
+  let queued = false;
+  function applyAll() {
+    queued = false;
+    Array.prototype.forEach.call(document.body.querySelectorAll('*'), applyTo);
+  }
+  function schedule() {
+    if (!queued) { queued = true; requestAnimationFrame(applyAll); }
+  }
+  new MutationObserver(schedule).observe(document.body, { childList: true, subtree: true });
+  window.addEventListener('resize', schedule);
+  schedule();
+})();
+
 // Session expired / logged out elsewhere: any 401 from the API goes to the login page
 const _fetch = window.fetch.bind(window);
 window.fetch = async (...args) => {
@@ -3313,6 +3516,12 @@ function confirmDeleteEntry(si, ei, entryLabel, scenarioName) {
     true
   );
 }
+
+// ── Help dialog (Esc closes it natively) ──
+const helpDialog = document.getElementById('helpDialog');
+document.getElementById('helpBtn').onclick = () => helpDialog.showModal();
+document.getElementById('helpClose').onclick = () => helpDialog.close();
+helpDialog.addEventListener('click', (e) => { if (e.target === helpDialog) helpDialog.close(); });  // backdrop
 
 // Close modal on overlay click
 document.getElementById('confirmModal').addEventListener('click', (e) => {
