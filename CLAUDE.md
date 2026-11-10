@@ -13,13 +13,16 @@ A web app that extracts read-aloud narrative text from Arkham Horror LCG campaig
 ## Project Structure
 ```
 app.py                  - Flask web app (main entry point)
+auth.py                 - Single-user login (setup token, sessions, lockout, set-password CLI)
 extract.py              - PDF extraction logic (font-based italic text detection)
 generate.py             - ElevenLabs TTS generation (supports model selection)
 arkham_tts.py           - CLI entry point (extract / generate / voices / merge)
 merge.py                - Merge a fresh extraction into an existing, user-edited campaign
 templates/index.html    - Full UI (single file, inline CSS/JS)
+templates/login.html    - Login / first-run account setup page
 data/                   - Campaign JSON files (extracted sections)
 data/_arkhamdb_packs.json - Cached ArkhamDB pack list (with cycle grouping)
+data/_auth.json         - Login account (username, password hash), session secret — never commit
 audio/                  - Generated audio files in human-readable paths (<Campaign>/<Scenario>/<Entry>.ext)
 uploads/                - Temporarily stored PDFs uploaded via web UI
 settings.json           - ElevenLabs API key, voice ID, model ID
@@ -74,6 +77,16 @@ CLAUDE.md               - This file (project context for Claude Code)
   3. Generic fallback: any bold text ending with `:` becomes a label if under 50 chars and doesn't start with game-mechanics verbs (Proceed, Check, Setup, etc.)
 - Generic fallback catches campaign-specific labels like "Reality's Shadow 1:", "Sebastien's Information:", "Daniel Was Possessed:", "Lola's Prologue:"
 - Checked before the tiers: `If <Name> is not listed under "...:"` (Dunwich Interlude II survivors) → label `<Name>`
+
+### Authentication (`auth.py`)
+- One account. Every route requires login except `/login`, `/setup`, `/logout`, `/static/*`, `/banner.jpg`, `/background.jpg`; `/api/*` → 401 JSON, pages → redirect to `/login?next=…`
+- No account yet → everything redirects to `/setup`, which needs the one-time token printed in the server console (safe even if the instance is already public)
+- `python arkham_tts.py set-password` creates/resets the account; changing the password bumps `session_version`, signing out all sessions
+- Passwords hashed with werkzeug; sessions are permanent cookies (30 days, HttpOnly, SameSite=Lax); 5 failed logins per IP → 15 min lockout
+- Env: `ARKHAM_SECURE_COOKIES=1` (HTTPS only cookies), `ARKHAM_TRUST_PROXY=1` (take client IP from X-Forwarded-For behind a reverse proxy, needed for the lockout)
+- `GET /api/settings` never returns the ElevenLabs key — only `api_key_set` and `api_key_hint` (last 4 chars); `PUT` with a blank key keeps the saved one
+- Frontend wraps `fetch`: any 401 sends the page to `/login`. "Log out" sits next to the credits indicator
+- Tests set `app.config["AUTH_DISABLED"] = True` to bypass login (`tests/test_arkhamdb_import.py`); `tests/test_auth.py` covers the login rules
 
 ### Web App (`app.py`)
 - Campaign data stored as JSON arrays of scenario objects in `data/`
@@ -149,6 +162,7 @@ python -m pytest -m "not pdf"   # fast unit + ArkhamDB tests only
 - `tests/test_extract_units.py` — extract.py helpers (labels, filters, header position, sort order)
 - `tests/test_extract_guides.py` (`pdf` marker) — runs extraction on the real guides in `uploads/` (or `$ARKHAM_PDF_DIR`); skipped if a PDF is missing. Pins verified behaviors per campaign; unlabeled counts are upper bounds — tighten them when extraction improves
 - `tests/test_arkhamdb_import.py` — import endpoint with saved pack responses in `tests/fixtures/` (no network)
+- `tests/test_auth.py` — login, setup token, lockout, logout, API key never returned
 - `tests/test_merge.py` — merge rules on synthetic campaigns (edits/audio/cards protected, moves, fragments, additions)
 - Run the suite after any change to `extract.py`; fixes for one campaign often regress another
 
@@ -179,7 +193,8 @@ python -m pytest -m "not pdf"   # fast unit + ArkhamDB tests only
 - `POST /api/arkhamdb/import/<id>` - Import agenda/act cards from ArkhamDB pack
 - `GET /api/arkhamdb/packs` - List ArkhamDB packs (cached, grouped by cycle)
 - `GET /api/credits` - ElevenLabs credit/character usage
-- `GET /api/settings` / `PUT /api/settings` - Read/write app settings
+- `GET /api/settings` / `PUT /api/settings` - Read/write app settings (API key write-only)
+- `GET|POST /login`, `GET|POST /setup?token=…`, `POST /logout`, `GET /api/me` - Authentication
 
 ## Tested Campaign Guides
 - Night of the Zealot (`night_of_the_zealot_campaign_guide.pdf`)

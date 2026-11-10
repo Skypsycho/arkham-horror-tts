@@ -17,6 +17,7 @@ from pathlib import Path
 
 from flask import Flask, jsonify, render_template, request, send_from_directory
 
+import auth
 from extract import extract_sections
 from generate import generate_audio_entry
 
@@ -30,6 +31,13 @@ SETTINGS_FILE = BASE_DIR / "settings.json"
 
 DATA_DIR.mkdir(exist_ok=True)
 AUDIO_DIR.mkdir(exist_ok=True)
+
+
+def auth_file():
+    return DATA_DIR / "_auth.json"
+
+
+auth.init_app(app, auth_file)
 
 generation_jobs = {}
 
@@ -955,14 +963,23 @@ def api_generate_status(job_id):
 
 @app.route("/api/settings", methods=["GET"])
 def api_get_settings():
-    s = _load_settings()
+    # The API key never leaves the server; the page only learns whether one is set
+    s = dict(_load_settings())
+    key = s.pop("api_key", "") or ""
+    s["api_key_set"] = bool(key)
+    s["api_key_hint"] = key[-4:] if len(key) >= 8 else ""
     return jsonify(s)
 
 
 @app.route("/api/settings", methods=["PUT"])
 def api_update_settings():
     settings = _load_settings()
-    settings.update(request.json)
+    updates = dict(request.json or {})
+    updates.pop("api_key_set", None)
+    updates.pop("api_key_hint", None)
+    if not updates.get("api_key"):
+        updates.pop("api_key", None)   # blank = keep the saved key
+    settings.update(updates)
     _save_settings(settings)
     return jsonify({"ok": True})
 

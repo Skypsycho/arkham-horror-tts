@@ -142,6 +142,11 @@ def cmd_merge(args):
     print(f"\nSaved {data_path.name} (backup: {backup.relative_to(base)})")
 
 
+def cmd_set_password(args):
+    import auth
+    auth.cli_set_password(Path(__file__).parent / "data" / "_auth.json")
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="Arkham Horror LCG Campaign Guide → TTS Audio"
@@ -166,6 +171,8 @@ def main():
     p_merge.add_argument("--pdf", help="Guide PDF (default: found in uploads/ via the FFG catalog)")
     p_merge.add_argument("--apply", action="store_true", help="Write changes (default: dry run)")
 
+    sub.add_parser("set-password", help="Create or reset the web app login")
+
     args = parser.parse_args()
 
     commands = {
@@ -173,6 +180,7 @@ def main():
         "generate": cmd_generate,
         "voices": cmd_voices,
         "merge": cmd_merge,
+        "set-password": cmd_set_password,
     }
     commands[args.command](args)
 

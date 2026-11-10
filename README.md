@@ -49,6 +49,8 @@ python app.py
 
 Open **http://localhost:5000** in your browser.
 
+The first time, the console prints a one-time setup link (`http://localhost:5000/setup?token=…`). Open it to create the single login account. Forgot the password? Run `python arkham_tts.py set-password`.
+
 On Windows, you can also double-click `run.bat` to install dependencies and start the app in one step.
 
 ### ElevenLabs API Key Setup

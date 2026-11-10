@@ -13,6 +13,7 @@ FIXTURES = Path(__file__).parent / "fixtures"
 @pytest.fixture
 def client(tmp_path, monkeypatch):
     monkeypatch.setattr(appmod, "DATA_DIR", tmp_path)
+    monkeypatch.setitem(appmod.app.config, "AUTH_DISABLED", True)
 
     def fake_urlopen(req, timeout=None):
         pack = req.full_url.rsplit("/", 1)[-1]

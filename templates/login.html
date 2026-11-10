@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{% if mode == 'login' %}Log in{% else %}Set up account{% endif %} · Arkham Horror TTS</title>
+<link href="https://fonts.googleapis.com/css2?family=UnifrakturMaguntia&family=Cormorant+Garamond:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #1a1a2e; --bg2: #16213e; --bg3: #0f3460; --surface: #1e2a4a;
+  --text: #e0e0e0; --text2: #a0a8c0; --accent: #c9a959; --accent2: #8b6914;
+  --danger: #e57373; --border: #2a3a5e;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  background: var(--bg) url('/background.jpg') no-repeat center center fixed;
+  background-size: cover;
+  color: var(--text);
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px;
+}
+.panel {
+  width: 100%;
+  max-width: 380px;
+  background: rgba(22, 33, 62, 0.94);
+  border: 1px solid var(--accent2);
+  border-radius: 12px;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.6);
+  overflow: hidden;
+}
+.banner { display: block; width: 100%; height: 120px; object-fit: cover; border-bottom: 2px solid var(--accent2); }
+form, .msg { padding: 24px 28px 28px; }
+h1 {
+  font-family: 'UnifrakturMaguntia', serif;
+  font-weight: 400;
+  font-size: 28px;
+  color: var(--accent);
+  margin-bottom: 6px;
+}
+.sub { font-size: 13px; color: var(--text2); margin-bottom: 20px; line-height: 1.5; }
+label { display: block; font-size: 12px; color: var(--text2); margin: 14px 0 6px; letter-spacing: 0.3px; }
+input {
+  width: 100%;
+  padding: 10px 12px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  font-size: 15px;
+  outline: none;
+}
+input:focus { border-color: var(--accent); }
+button {
+  width: 100%;
+  margin-top: 22px;
+  padding: 11px;
+  background: var(--accent2);
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  color: #fff;
+  font-size: 15px;
+  cursor: pointer;
+}
+button:hover { background: var(--accent); color: var(--bg); }
+.error {
+  margin-top: 14px;
+  padding: 9px 12px;
+  border: 1px solid var(--danger);
+  border-radius: 6px;
+  color: var(--danger);
+  font-size: 13px;
+}
+code { background: var(--bg); padding: 1px 5px; border-radius: 3px; font-size: 12px; white-space: nowrap; }
+</style>
+</head>
+<body>
+<div class="panel">
+  <img class="banner" src="/banner.jpg" alt="Arkham Horror TTS">
+
+  {% if mode == 'login' %}
+  <form method="post">
+    <h1>Welcome back</h1>
+    <p class="sub">Log in to open your campaign library.</p>
+    <label for="username">Username</label>
+    <input id="username" name="username" autocomplete="username" value="{{ username }}" required {% if not username %}autofocus{% endif %}>
+    <label for="password">Password</label>
+    <input id="password" name="password" type="password" autocomplete="current-password" required {% if username %}autofocus{% endif %}>
+    {% if error %}<div class="error" role="alert">{{ error }}</div>{% endif %}
+    <button type="submit">Log in</button>
+  </form>
+
+  {% elif mode == 'setup' %}
+  <form method="post">
+    <input type="hidden" name="token" value="{{ token }}">
+    <h1>Create your account</h1>
+    <p class="sub">This is the only account that can open the app. You can reset it later with <code>python arkham_tts.py set-password</code>.</p>
+    <label for="username">Username</label>
+    <input id="username" name="username" autocomplete="username" value="{{ username }}" required autofocus>
+    <label for="password">Password (8+ characters)</label>
+    <input id="password" name="password" type="password" autocomplete="new-password" minlength="8" required>
+    <label for="confirm">Repeat password</label>
+    <input id="confirm" name="confirm" type="password" autocomplete="new-password" minlength="8" required>
+    {% if error %}<div class="error" role="alert">{{ error }}</div>{% endif %}
+    <button type="submit">Create account</button>
+  </form>
+
+  {% else %}
+  <div class="msg">
+    <h1>Setup needed</h1>
+    <p class="sub">No account exists yet. Open the one-time setup link printed in the server console, or create the account from the command line with <code>python arkham_tts.py set-password</code>.</p>
+  </div>
+  {% endif %}
+</div>
+</body>
+</html>

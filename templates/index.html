@@ -100,6 +100,18 @@ header {
 }
 
 .tab:hover { color: var(--text); background: var(--surface); }
+
+.logout-form { display: inline; margin-left: 6px; }
+.logout-btn {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text2);
+  border-radius: 10px;
+  padding: 1px 9px;
+  font-size: 11px;
+  cursor: pointer;
+}
+.logout-btn:hover { color: var(--text); border-color: var(--accent2); }
 .tab.active { background: var(--bg3); color: var(--accent); }
 
 .main { flex: 1; display: flex; overflow: hidden; }
@@ -1350,6 +1362,9 @@ input:focus { outline: none; border-color: var(--accent); }
     <div class="credits-indicator" id="creditsIndicator" title="ElevenLabs credits">
       <div class="credits-bar"><div class="credits-fill" id="creditsFill"></div></div>
       <span id="creditsText">--</span>
+      <form method="post" action="/logout" class="logout-form">
+        <button type="submit" class="logout-btn" id="logoutBtn" title="Log out">Log out</button>
+      </form>
     </div>
   </div>
 </header>
@@ -1489,6 +1504,19 @@ input:focus { outline: none; border-color: var(--accent); }
 </div>
 
 <script>
+// Session expired / logged out elsewhere: any 401 from the API goes to the login page
+const _fetch = window.fetch.bind(window);
+window.fetch = async (...args) => {
+  const res = await _fetch(...args);
+  if (res.status === 401) {
+    window.location.href = '/login?next=' + encodeURIComponent(location.pathname);
+  }
+  return res;
+};
+fetch('/api/me').then(r => r.ok ? r.json() : null).then(me => {
+  if (me && me.username) document.getElementById('logoutBtn').title = `Log out ${me.username}`;
+}).catch(() => {});
+
 const audioEl = document.getElementById('audioEl');
 let currentCampaignId = null;
 let currentCampaignData = null;
@@ -3086,7 +3114,7 @@ async function generateAudio() {
   }
 
   const settings = await (await fetch('/api/settings')).json();
-  if (!settings.api_key) {
+  if (!settings.api_key_set) {
     document.getElementById('genStatus').textContent = 'Set your API key in Settings first.';
     document.getElementById('genStatus').className = 'status-msg error';
     return;
@@ -3146,7 +3174,11 @@ async function generateAudio() {
 async function loadSettings() {
   const res = await fetch('/api/settings');
   const s = await res.json();
-  document.getElementById('settingsApiKey').value = s.api_key || '';
+  const keyInput = document.getElementById('settingsApiKey');
+  keyInput.value = '';
+  keyInput.placeholder = s.api_key_set
+    ? `Saved${s.api_key_hint ? ` (ends in ${s.api_key_hint})` : ''}. Leave blank to keep it`
+    : 'sk_...';
   document.getElementById('settingsVoiceId').value = s.voice_id || '';
   document.getElementById('settingsModel').value = s.model_id || 'eleven_v4';
 }
@@ -3159,8 +3191,9 @@ async function saveSettings() {
   await fetch('/api/settings', {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ api_key: apiKey, voice_id: voiceId, model_id: modelId }),
+    body: JSON.stringify({ ...(apiKey ? { api_key: apiKey } : {}), voice_id: voiceId, model_id: modelId }),
   });
+  loadSettings();
 
   document.getElementById('settingsStatus').textContent = 'Settings saved.';
   document.getElementById('settingsStatus').className = 'status-msg success';
