@@ -1692,6 +1692,21 @@ input:focus { outline: none; border-color: var(--accent); }
 
   const px = v => parseFloat(v) || 0;
   const SIDES = ['marginLeft', 'marginTop', 'marginBottom'];
+
+  // Margins we added are remembered per element; a side is only written when
+  // its value actually changes. (Clearing and re-setting margins on every pass
+  // made elements with `transition: all` visibly wobble.)
+  function setSide(el, side, value, ccs) {
+    const ours = el.dataset['gap' + side];
+    if (ours === undefined) {
+      if (!value || px(ccs[side])) return;   // nothing to add, or the CSS sets its own margin
+    } else if (ours === value) {
+      return;
+    }
+    el.style[side] = value;
+    if (value) el.dataset['gap' + side] = value; else delete el.dataset['gap' + side];
+  }
+
   function applyTo(container) {
     const cs = getComputedStyle(container);
     if (cs.display !== 'flex' && cs.display !== 'inline-flex') return;
@@ -1701,25 +1716,22 @@ input:focus { outline: none; border-color: var(--accent); }
     const wraps = cs.flexWrap !== 'nowrap';
     let first = true;
     Array.prototype.forEach.call(container.children, child => {
-      // undo what we set last time, then re-apply (visibility may have changed)
-      if (child.dataset.gapFix) {
-        SIDES.forEach(side => { child.style[side] = ''; });
-        delete child.dataset.gapFix;
-      }
       const ccs = getComputedStyle(child);
-      if (ccs.display === 'none' || ccs.position === 'absolute' || ccs.position === 'fixed') return;
-      const set = {};
-      if (isRow) {
-        if (!first && colGap && !px(ccs.marginLeft)) set.marginLeft = colGap + 'px';
-        if (wraps && rowGap && !px(ccs.marginBottom)) set.marginBottom = rowGap + 'px';
-      } else if (!first && rowGap && !px(ccs.marginTop)) {
-        set.marginTop = rowGap + 'px';
+      const skip = ccs.display === 'none' || ccs.position === 'absolute' || ccs.position === 'fixed';
+      const want = { marginLeft: '', marginTop: '', marginBottom: '' };
+      if (!skip) {
+        if (isRow) {
+          if (!first && colGap) want.marginLeft = colGap + 'px';
+          if (wraps && rowGap) want.marginBottom = rowGap + 'px';
+        } else if (!first && rowGap) {
+          want.marginTop = rowGap + 'px';
+        }
+        first = false;
       }
-      Object.keys(set).forEach(side => { child.style[side] = set[side]; });
-      if (Object.keys(set).length) child.dataset.gapFix = '1';
-      first = false;
+      SIDES.forEach(side => setSide(child, side, want[side], ccs));
     });
   }
+
   let queued = false;
   function applyAll() {
     queued = false;
@@ -1728,7 +1740,12 @@ input:focus { outline: none; border-color: var(--accent); }
   function schedule() {
     if (!queued) { queued = true; requestAnimationFrame(applyAll); }
   }
-  new MutationObserver(schedule).observe(document.body, { childList: true, subtree: true });
+  // The player bar's clock/title text changes constantly while audio plays and
+  // never affects layout spacing, so those changes are ignored
+  const playerBar = document.querySelector('.player-bar');
+  new MutationObserver(records => {
+    if (records.some(r => !(playerBar && playerBar.contains(r.target)))) schedule();
+  }).observe(document.body, { childList: true, subtree: true });
   window.addEventListener('resize', schedule);
   schedule();
 })();
