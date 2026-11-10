@@ -819,6 +819,19 @@ body.mode-edit .entry-wrapper.card-back .entry-info .label::before {
   white-space: nowrap;
 }
 .ps-back:hover { color: var(--text); border-color: var(--accent2); }
+.ps-nav { display: flex; gap: 6px; }
+.ps-step {
+  background: var(--surface);
+  border: 1px solid var(--accent2);
+  color: var(--accent);
+  border-radius: 16px;
+  padding: 5px 14px;
+  cursor: pointer;
+  font-size: 13px;
+  white-space: nowrap;
+}
+.ps-step:hover:not(:disabled) { background: var(--bg3); border-color: var(--accent); }
+.ps-step:disabled { opacity: 0.35; cursor: default; color: var(--text2); border-color: var(--border); }
 .ps-reset { padding: 5px 12px; font-size: 12px; white-space: nowrap; }
 
 .play-scenario .play-btn {
@@ -1800,13 +1813,21 @@ function renderPlayScenario(panel, si) {
   const view = document.createElement('div');
   view.className = 'play-scenario';
 
+  const prevS = currentCampaignData[si - 1], nextS = currentCampaignData[si + 1];
   const head = document.createElement('div');
   head.className = 'ps-head';
   head.innerHTML = `
     <button class="ps-back" title="Back to the scenario list">&#8249; Scenarios</button>
     <h2>${escHtml(scenario.scenario)}</h2>
+    <div class="ps-nav">
+      <button class="ps-step" data-step="-1" ${prevS ? `title="Previous: ${escAttr(prevS.scenario)}"` : 'disabled title="This is the first scenario"'}>&#8249; Previous</button>
+      <button class="ps-step" data-step="1" ${nextS ? `title="Next: ${escAttr(nextS.scenario)}"` : 'disabled title="This is the last scenario"'}>Next &#8250;</button>
+    </div>
     <button class="btn btn-secondary ps-reset" title="Put both decks back on their first card">Reset decks</button>`;
   head.querySelector('.ps-back').onclick = closePlayScenario;
+  head.querySelectorAll('.ps-step').forEach(b => b.onclick = () => {
+    if (!b.disabled) openPlayScenario(si + Number(b.dataset.step));
+  });
   head.querySelector('.ps-reset').onclick = () => {
     ['Agenda', 'Act'].forEach(t => setDeckPos(scenario, t, 0));
     renderScenarios();
