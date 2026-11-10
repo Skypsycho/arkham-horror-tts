@@ -757,126 +757,221 @@ body.mode-edit .entry-wrapper.card-back .entry-info .label::before {
   margin-right: 6px;
 }
 
-/* ── Act / Agenda card tiles (play mode) ── */
-.card-tile-wrap { border-bottom: 1px solid rgba(255,255,255,0.03); }
+/* ── Play mode: scenario list ── */
+.play-list { padding: 8px 0; }
 
-.card-tile {
+.play-list-item {
   display: flex;
-  flex-wrap: wrap;   /* side buttons drop below the name when space runs out */
   align-items: center;
-  gap: 10px 14px;
-  padding: 10px 20px;
-}
-
-.card-tile:hover { background: var(--surface); }
-
-.card-icon {
-  width: 30px;
-  height: 42px;
-  flex-shrink: 0;
-  perspective: 300px;
-}
-
-.card-icon-inner {
-  position: relative;
+  gap: 16px;
   width: 100%;
-  height: 100%;
-  transition: transform 0.6s;
-  transform-style: preserve-3d;
-}
-
-.card-tile.flipped .card-icon-inner { transform: rotateY(180deg); }
-
-.card-icon-face {
-  position: absolute;
-  inset: 0;
-  border-radius: 4px;
-  border: 1px solid var(--accent2);
-  backface-visibility: hidden;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.5px;
-}
-
-.card-icon-face.front { background: var(--bg3); color: var(--accent); }
-.card-icon-face.back { background: var(--accent2); color: #fff; transform: rotateY(180deg); }
-
-.card-title { flex: 1 1 180px; min-width: 180px; }
-
-.card-title .card-type {
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  color: var(--text2);
-}
-
-.card-title .card-name {
-  font-size: 16px;
-  font-family: 'Cormorant Garamond', 'Palatino Linotype', Palatino, serif;
-  font-weight: 500;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* buttons stay together as one row; the row moves under the name if needed */
-.card-sides { display: flex; gap: 8px; align-items: center; flex-wrap: nowrap; margin-left: auto; }
-
-.card-side {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 4px 12px 4px 4px;
-  border: 1px solid var(--border);
-  border-radius: 20px;
-  cursor: pointer;
-  font-size: 12px;
-  color: var(--text2);
-  transition: all 0.2s;
+  padding: 14px 24px;
   background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s;
+  font: inherit;
 }
+.play-list-item:hover { background: var(--surface); }
+.play-list-item:hover .pl-arrow { color: var(--accent); transform: translateX(3px); }
 
-.card-side:hover { border-color: var(--accent2); color: var(--text); }
-.card-side .play-btn {
-  width: 28px; height: 28px; border-radius: 50%;
-  border: 1px solid var(--accent2); background: transparent; color: var(--accent);
-  display: flex; align-items: center; justify-content: center; font-size: 11px; cursor: pointer;
+.pl-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-family: 'Cormorant Garamond', 'Palatino Linotype', Palatino, serif;
+  font-size: 19px;
+  font-weight: 500;
 }
-.card-side .play-btn:disabled { opacity: 0.3; cursor: not-allowed; }
-.card-side.no-audio { cursor: default; opacity: 0.6; }
+.pl-chips { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.pl-chips span {
+  font-size: 11px;
+  color: var(--text2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 2px 8px;
+  white-space: nowrap;
+}
+.pl-arrow { font-size: 22px; color: var(--text2); transition: all 0.15s; }
 
-/* the side you'd read next is highlighted: front first, back once flipped */
-.card-tile:not(.flipped) .card-side.front,
-.card-tile.flipped .card-side.back {
-  border-color: var(--accent2);
+/* ── Play mode: one scenario, full panel ── */
+.play-scenario { padding: 16px 24px 32px; }
+
+.ps-head { display: flex; align-items: center; gap: 16px; margin-bottom: 20px; }
+.ps-head h2 {
+  flex: 1;
+  min-width: 0;
+  font-family: 'Cormorant Garamond', 'Palatino Linotype', Palatino, serif;
+  font-size: 26px;
+  font-weight: 500;
   color: var(--accent);
 }
-.card-tile.flipped .card-side.front { opacity: 0.55; }
+.ps-back {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text2);
+  border-radius: 16px;
+  padding: 5px 14px 5px 10px;
+  cursor: pointer;
+  font-size: 13px;
+  white-space: nowrap;
+}
+.ps-back:hover { color: var(--text); border-color: var(--accent2); }
+.ps-reset { padding: 5px 12px; font-size: 12px; white-space: nowrap; }
 
-.card-side.playing { background: var(--bg3); border-color: var(--accent); color: var(--accent); }
-.card-side .play-btn.playing-btn { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+.play-scenario .play-btn {
+  width: 40px; height: 40px; border-radius: 50%;
+  border: 1px solid var(--accent2); background: transparent; color: var(--accent);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px; cursor: pointer; flex-shrink: 0; transition: all 0.2s;
+}
+.play-scenario .play-btn:hover:not(:disabled) { background: var(--accent2); color: #fff; }
+.play-scenario .play-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+.play-scenario .play-btn.playing-btn { background: var(--accent); color: var(--bg); border-color: var(--accent); }
 
-.card-tile .text-btn {
+.ps-intros { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-bottom: 24px; }
+.intro-btn {
+  display: flex; align-items: center; gap: 12px;
+  padding: 6px 20px 6px 6px;
+  border: 1px solid var(--border);
+  border-radius: 28px;
+  background: var(--surface);
+  cursor: pointer;
+  font-family: 'Cormorant Garamond', 'Palatino Linotype', Palatino, serif;
+  font-size: 17px;
+  transition: border-color 0.15s, background 0.15s;
+}
+.intro-btn:hover { border-color: var(--accent2); }
+.intro-btn.primary { padding: 8px 28px 8px 8px; font-size: 21px; border-color: var(--accent2); }
+.intro-btn.primary .play-btn { width: 48px; height: 48px; font-size: 17px; }
+.intro-btn.playing { background: var(--bg3); border-color: var(--accent); }
+.intro-btn.no-audio { cursor: default; opacity: 0.6; }
+
+.ps-decks {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr));
+  gap: 24px;
+  max-width: 820px;
+  margin: 0 auto 28px;
+}
+
+.deck-card {
+  --tint: #7a2a2a;
+  position: relative;
+  min-height: 340px;
+  display: flex;
+  flex-direction: column;
+  padding: 18px 20px 20px;
+  border: 2px solid var(--tint);
+  border-radius: 14px;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--tint) 35%, transparent), transparent 45%),
+    var(--bg2);
+  box-shadow: 0 6px 24px rgba(0,0,0,0.45);
+}
+.deck-card.act { --tint: #2f5d7a; }
+.deck-card.back {
+  background:
+    linear-gradient(0deg, color-mix(in srgb, var(--tint) 35%, transparent), transparent 55%),
+    var(--surface);
+}
+.deck-card.flip-in { animation: dc-flip 0.35s ease-out; }
+@keyframes dc-flip {
+  from { transform: perspective(900px) rotateY(80deg); opacity: 0.3; }
+  to   { transform: perspective(900px) rotateY(0); opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) { .deck-card.flip-in { animation: none; } }
+
+.dc-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.dc-type {
+  font-size: 11px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase;
+  color: var(--accent);
+}
+.dc-count { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text2); }
+.dc-prev {
+  width: 26px; height: 26px; border-radius: 50%;
+  border: 1px solid var(--border); background: transparent; color: var(--text2);
+  cursor: pointer; font-size: 16px; line-height: 1;
+}
+.dc-prev:hover:not(:disabled) { color: var(--text); border-color: var(--accent2); }
+.dc-prev:disabled { opacity: 0.3; cursor: default; }
+
+.dc-name {
+  flex: 1;
+  display: flex; align-items: center; justify-content: center;
+  text-align: center;
+  padding: 24px 6px;
+  font-family: 'Cormorant Garamond', 'Palatino Linotype', Palatino, serif;
+  font-size: 30px;
+  font-weight: 500;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+.dc-side {
+  text-align: center;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  color: var(--text2);
+  margin-bottom: 16px;
+}
+
+.dc-controls { display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap; }
+.dc-plays { display: flex; flex-direction: column; gap: 8px; }
+.dc-play {
+  display: flex; align-items: center; gap: 10px;
+  padding: 5px 16px 5px 5px;
+  border: 1px solid var(--accent2);
+  border-radius: 26px;
+  cursor: pointer;
+  font-size: 14px;
+  color: var(--accent);
+}
+.dc-play.playing { background: var(--bg3); border-color: var(--accent); }
+.dc-play.no-audio { cursor: default; opacity: 0.55; color: var(--text2); }
+.dc-next {
+  padding: 13px 18px;
+  border: 1px solid var(--border);
+  border-radius: 26px;
+  background: var(--surface2);
+  color: var(--text);
+  font-size: 14px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.dc-next:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+.dc-next:disabled { opacity: 0.4; cursor: default; }
+
+.deck-card .dc-text {
+  position: absolute; right: 10px; bottom: 10px;
   width: 28px; height: 28px; border: none; background: transparent; color: var(--text2);
   cursor: pointer; border-radius: 4px; font-size: 14px; align-items: center; justify-content: center;
 }
-.card-tile .text-btn:hover { background: var(--surface2); color: var(--text); }
-
-.card-tile-wrap .entry-expanded { padding-left: 64px; }
-.card-tile-wrap .entry-expanded .side-caption {
+.deck-card .dc-text:hover { background: var(--surface2); color: var(--text); }
+.deck-card .entry-expanded { padding: 12px 0 0; }
+.deck-card .entry-expanded .side-caption {
   font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;
   color: var(--accent2); padding: 8px 0 4px;
 }
+
+.deck-card.empty { opacity: 0.6; box-shadow: none; border-style: dashed; }
+.dc-empty { flex: 1; display: flex; align-items: center; justify-content: center; text-align: center; color: var(--text2); font-size: 13px; line-height: 1.6; }
+
+.ps-other { border-top: 1px solid var(--border); max-width: 820px; margin: 0 auto; }
+.ps-other:last-of-type { border-bottom: 1px solid var(--border); }
+.ps-empty { text-align: center; color: var(--text2); padding: 40px 0; }
 
 @media (max-width: 700px) {
   .library-toolbar { padding: 8px 12px; }
   .library-toolbar .toolbar-stats { display: none; }
   .mode-switch button { padding: 6px 10px; }
-  .card-tile { flex-wrap: wrap; padding: 10px 12px; }
-  .card-sides { width: 100%; justify-content: flex-start; padding-left: 44px; }
+  .play-list-item { padding: 12px 16px; }
+  .pl-chips { display: none; }
+  .play-scenario { padding: 12px 16px 24px; }
+  .ps-head { flex-wrap: wrap; gap: 10px; }
+  .ps-head h2 { order: 3; flex-basis: 100%; font-size: 22px; }
+  .deck-card { min-height: 280px; }
+  .dc-name { font-size: 26px; }
 }
 
 /* ── Audio Player Bar ── */
@@ -1410,8 +1505,8 @@ function addCthulhu(el, campaignId) {
   if (cthulhuShownFor === campaignId) el.querySelector('.cthulhu-mark').classList.add('no-grow');
   cthulhuShownFor = campaignId;
 }
-// Act/agenda cards turned to their back side, keyed "<campaign>|<si>|<card key>"
-const flippedCards = new Set();
+// Play mode: index of the scenario opened full-panel (null = scenario list)
+let playScenario = null;
 
 // ── Play / Edit mode ──
 let viewMode = 'play';
@@ -1522,6 +1617,7 @@ async function loadLibrary() {
 }
 
 async function selectCampaign(id) {
+  if (id !== currentCampaignId) playScenario = null;
   currentCampaignId = id;
   document.querySelectorAll('.campaign-item').forEach(el => el.classList.remove('active'));
   if (event.currentTarget) event.currentTarget.classList.add('active');
@@ -1600,81 +1696,236 @@ function buildEntryWrapper(scenario, si, entry, ei) {
   return wrapper;
 }
 
-// Play mode: one tile per act/agenda card, with its front and back side(s).
-// Returns DOM nodes in the order the entries appear; non-card entries fall
-// back to normal rows.
-function buildCardNodes(scenario, si, indices) {
-  const nodes = [];
-  const cards = new Map();
-  indices.forEach(ei => {
-    const entry = scenario.entries[ei];
-    const card = parseCard(entry);
-    if (!card) { nodes.push(buildEntryWrapper(scenario, si, entry, ei)); return; }
-    if (!cards.has(card.key)) {
-      const c = { ...card, fronts: [], backs: [] };
-      cards.set(card.key, c);
-      nodes.push(c);
-    }
-    cards.get(card.key)[card.side === 'front' ? 'fronts' : 'backs'].push({ ei, entry, variant: card.variant });
-  });
-  return nodes.map(n => (n instanceof Node ? n : buildCardTile(scenario, si, n)));
+// ── Play mode: scenario list → full-panel scenario view ──
+
+function audioPathFor(scenario, entry) {
+  return entry.audio_file || `${currentCampaignId}/${scenario.scenario_folder}/${entry.label}.mp3`;
 }
 
-function buildCardTile(scenario, si, card) {
-  const flipKey = `${currentCampaignId}|${si}|${card.key}`;
-  const wrap = document.createElement('div');
-  wrap.className = 'card-tile-wrap';
+function playCall(scenario, si, ei) {
+  const e = scenario.entries[ei];
+  return `playEntry('${escAttr(audioPathFor(scenario, e))}', '${escAttr(e.display_label)}', '${escAttr(scenario.scenario)}', '${si}-${ei}')`;
+}
 
-  const side = (s, which) => {
-    const e = s.entry;
-    const hasAudio = e.has_audio;
-    const audioPath = e.audio_file || `${currentCampaignId}/${scenario.scenario_folder}/${e.label}.mp3`;
-    const name = which === 'front' ? 'Front' : (s.variant ? `Back · ${s.variant}` : 'Back');
-    const title = hasAudio ? `Play ${name.toLowerCase()}` : 'No audio yet — generate it in Edit mode';
-    return `
-      <div class="card-side ${which}${hasAudio ? '' : ' no-audio'}" id="entry-${si}-${s.ei}" data-side="${which}" title="${escAttr(title)}">
-        <button class="play-btn" ${hasAudio ? '' : 'disabled'}
-          onclick="playEntry('${escAttr(audioPath)}', '${escAttr(e.display_label)}', '${escAttr(scenario.scenario)}', '${si}-${s.ei}')">&#9654;</button>
-        <span>${escHtml(name)}</span>
-      </div>`;
+// Splits a scenario into intro entries, the act/agenda decks, and everything else
+function classifyScenario(scenario) {
+  const intros = [], other = new Map();
+  scenario.entries.forEach((entry, ei) => {
+    if (parseCard(entry)) return;
+    const sg = entry.subgroup || null;
+    if (!sg || sg === 'Intros') { intros.push(ei); return; }
+    if (!other.has(sg)) other.set(sg, []);
+    other.get(sg).push(ei);
+  });
+  return { intros, other, agenda: buildDeck(scenario, 'Agenda'), act: buildDeck(scenario, 'Act') };
+}
+
+// Cards of one type in entry order; each step is one side of one card
+function buildDeck(scenario, type) {
+  const cards = [], byKey = new Map();
+  scenario.entries.forEach((entry, ei) => {
+    const c = parseCard(entry);
+    if (!c || c.type !== type) return;
+    if (!byKey.has(c.key)) {
+      const card = { name: c.name, front: [], back: [] };
+      byKey.set(c.key, card);
+      cards.push(card);
+    }
+    byKey.get(c.key)[c.side].push({ ei, entry, variant: c.variant });
+  });
+  const steps = [];
+  cards.forEach((card, ci) => ['front', 'back'].forEach(side => {
+    if (card[side].length) steps.push({ card, ci, side });
+  }));
+  return { type, cards, steps };
+}
+
+// Deck positions survive reloads (per campaign + scenario name)
+const deckPosMemory = {};
+function deckPosKey(scenario, type) { return `deckPos|${currentCampaignId}|${scenario.scenario}|${type}`; }
+function getDeckPos(scenario, type) {
+  const k = deckPosKey(scenario, type);
+  let v = deckPosMemory[k];
+  if (v === undefined) { try { v = parseInt(localStorage.getItem(k), 10); } catch (e) {} }
+  return Number.isFinite(v) ? v : 0;
+}
+function setDeckPos(scenario, type, pos) {
+  const k = deckPosKey(scenario, type);
+  deckPosMemory[k] = pos;
+  try { localStorage.setItem(k, String(pos)); } catch (e) {}
+}
+
+function renderPlayMode(panel) {
+  if (playScenario !== null && !currentCampaignData[playScenario]) playScenario = null;
+  if (playScenario === null) renderPlayList(panel);
+  else renderPlayScenario(panel, playScenario);
+}
+
+function openPlayScenario(si) {
+  playScenario = si;
+  renderScenarios();
+  document.getElementById('scenarioPanel').scrollTop = 0;
+}
+
+function closePlayScenario() {
+  playScenario = null;
+  renderScenarios();
+}
+
+function renderPlayList(panel) {
+  const list = document.createElement('div');
+  list.className = 'play-list';
+  currentCampaignData.forEach((scenario, si) => {
+    const parts = classifyScenario(scenario);
+    const chips = [];
+    if (parts.intros.length) chips.push(parts.intros.length > 1 ? `${parts.intros.length} intros` : 'Intro');
+    if (parts.agenda.cards.length) chips.push(`${parts.agenda.cards.length} agenda`);
+    if (parts.act.cards.length) chips.push(`${parts.act.cards.length} act`);
+    parts.other.forEach((idx, sg) => chips.push(`${idx.length} ${sg.toLowerCase()}`));
+    const row = document.createElement('button');
+    row.className = 'play-list-item';
+    row.innerHTML = `
+      <span class="pl-name">${escHtml(scenario.scenario)}</span>
+      <span class="pl-chips">${chips.map(c => `<span>${escHtml(c)}</span>`).join('')}</span>
+      <span class="pl-arrow">&#8250;</span>`;
+    row.onclick = () => openPlayScenario(si);
+    list.appendChild(row);
+  });
+  panel.appendChild(list);
+}
+
+function renderPlayScenario(panel, si) {
+  const scenario = currentCampaignData[si];
+  const parts = classifyScenario(scenario);
+  const view = document.createElement('div');
+  view.className = 'play-scenario';
+
+  const head = document.createElement('div');
+  head.className = 'ps-head';
+  head.innerHTML = `
+    <button class="ps-back" title="Back to the scenario list">&#8249; Scenarios</button>
+    <h2>${escHtml(scenario.scenario)}</h2>
+    <button class="btn btn-secondary ps-reset" title="Put both decks back on their first card">Reset decks</button>`;
+  head.querySelector('.ps-back').onclick = closePlayScenario;
+  head.querySelector('.ps-reset').onclick = () => {
+    ['Agenda', 'Act'].forEach(t => setDeckPos(scenario, t, 0));
+    renderScenarios();
   };
+  view.appendChild(head);
 
-  const sides = [...card.fronts.map(s => side(s, 'front')), ...card.backs.map(s => side(s, 'back'))].join('');
-  const all = [...card.fronts, ...card.backs];
-  const flipped = flippedCards.has(flipKey) || (!card.fronts.length && card.backs.length);
+  if (parts.intros.length) {
+    const intros = document.createElement('div');
+    intros.className = 'ps-intros';
+    parts.intros.forEach((ei, i) => {
+      const e = scenario.entries[ei];
+      const b = document.createElement('div');
+      b.className = 'intro-btn' + (i === 0 ? ' primary' : '') + (e.has_audio ? '' : ' no-audio');
+      b.id = `entry-${si}-${ei}`;
+      b.title = e.has_audio ? `Play ${e.display_label}` : 'No audio yet — generate it in Edit mode';
+      b.innerHTML = `<button class="play-btn" ${e.has_audio ? '' : 'disabled'} onclick="${playCall(scenario, si, ei)}">&#9654;</button><span>${escHtml(e.display_label)}</span>`;
+      b.addEventListener('click', (ev) => {
+        if (ev.target.closest('button')) return;
+        const btn = b.querySelector('.play-btn');
+        if (!btn.disabled) btn.click();
+      });
+      intros.appendChild(b);
+    });
+    view.appendChild(intros);
+  }
 
-  wrap.innerHTML = `
-    <div class="card-tile${flipped ? ' flipped' : ''}" data-flip-key="${escAttr(flipKey)}">
-      <div class="card-icon" title="Click to flip">
-        <div class="card-icon-inner">
-          <div class="card-icon-face front">${card.type === 'Act' ? 'ACT' : 'AGD'}</div>
-          <div class="card-icon-face back">&#8635;</div>
-        </div>
-      </div>
-      <div class="card-title">
-        <div class="card-type">${escHtml(card.type)}</div>
-        <div class="card-name" title="${escAttr(card.name)}">${escHtml(card.name)}</div>
-      </div>
-      <div class="card-sides">${sides}<button class="text-btn" title="Show / edit text">&#182;</button></div>
+  if (parts.agenda.steps.length || parts.act.steps.length) {
+    const decks = document.createElement('div');
+    decks.className = 'ps-decks';
+    decks.appendChild(buildDeckCard(scenario, si, parts.agenda));
+    decks.appendChild(buildDeckCard(scenario, si, parts.act));
+    view.appendChild(decks);
+  }
+
+  // Resolutions, codex entries, … as plain play rows
+  parts.other.forEach((indices, sg) => {
+    const sec = document.createElement('div');
+    sec.className = 'ps-other';
+    const h = document.createElement('div');
+    h.className = 'subgroup-header';
+    h.innerHTML = `<span class="arrow">&#9654;</span> <span class="subgroup-name">${escHtml(sg)}</span> <span style="opacity:0.5">(${indices.length})</span>`;
+    const list = document.createElement('div');
+    list.className = 'subgroup-entries';
+    h.onclick = () => { h.classList.toggle('open'); list.classList.toggle('open'); };
+    indices.forEach(ei => list.appendChild(buildEntryWrapper(scenario, si, scenario.entries[ei], ei)));
+    sec.appendChild(h);
+    sec.appendChild(list);
+    view.appendChild(sec);
+  });
+
+  if (!parts.intros.length && !parts.agenda.steps.length && !parts.act.steps.length && !parts.other.size) {
+    view.insertAdjacentHTML('beforeend', '<div class="ps-empty">Nothing to play in this scenario.</div>');
+  }
+  panel.appendChild(view);
+}
+
+// One big card showing the current side of the deck's current card
+function buildDeckCard(scenario, si, deck, animate = false) {
+  const el = document.createElement('div');
+  el.className = `deck-card ${deck.type.toLowerCase()} keep-open-scope`;
+  if (!deck.steps.length) {
+    el.classList.add('empty');
+    el.innerHTML = `
+      <div class="dc-top"><span class="dc-type">${deck.type}</span></div>
+      <div class="dc-empty">No ${deck.type.toLowerCase()} cards here.<br>Import them from ArkhamDB on the Import tab.</div>`;
+    return el;
+  }
+
+  const pos = Math.min(Math.max(getDeckPos(scenario, deck.type), 0), deck.steps.length - 1);
+  const step = deck.steps[pos];
+  const next = deck.steps[pos + 1];
+  const sides = step.card[step.side];
+  const cardNo = `${step.ci + 1}${step.side === 'front' ? 'a' : 'b'}`;
+  const nextLabel = !next ? 'End of deck' : next.ci === step.ci ? 'Flip to back' : 'Next card';
+  el.classList.add(step.side);
+  if (animate) el.classList.add('flip-in');
+
+  const playButtons = sides.map(s => {
+    const has = s.entry.has_audio;
+    const label = s.variant ? s.variant : (step.side === 'front' ? 'Play front' : 'Play back');
+    return `
+      <div class="dc-play${has ? '' : ' no-audio'}" id="entry-${si}-${s.ei}" title="${has ? '' : 'No audio yet — generate it in Edit mode'}">
+        <button class="play-btn" ${has ? '' : 'disabled'} onclick="${playCall(scenario, si, s.ei)}">&#9654;</button>
+        <span>${escHtml(label)}</span>
+      </div>`;
+  }).join('');
+
+  el.innerHTML = `
+    <div class="dc-top">
+      <span class="dc-type">${deck.type} ${cardNo}</span>
+      <span class="dc-count">
+        <button class="dc-prev" ${pos === 0 ? 'disabled' : ''} title="Previous side">&#8249;</button>
+        ${step.ci + 1} / ${deck.cards.length}
+      </span>
     </div>
-    ${all.map(s => buildExpandedHtml(si, s.ei, s.entry,
-        s.entry.display_label.match(/\((Front|Back)\)$/)[1] + (s.variant ? ` · ${s.variant}` : ''))).join('')}
-  `;
+    <div class="dc-name">${escHtml(step.card.name)}</div>
+    <div class="dc-side">${step.side === 'front' ? 'Front' : 'Back'}</div>
+    <div class="dc-controls">
+      <div class="dc-plays">${playButtons}</div>
+      <button class="dc-next" ${next ? '' : 'disabled'} title="${next ? escAttr(nextLabel) : 'Last card of the deck'}">${escHtml(nextLabel)}${next ? ' &#8250;' : ''}</button>
+    </div>
+    <button class="dc-text text-btn" title="Show / edit text">&#182;</button>
+    ${sides.map(s => buildExpandedHtml(si, s.ei, s.entry, s.variant || '')).join('')}`;
 
-  const tile = wrap.querySelector('.card-tile');
-  // Clicking a side (not just its button) plays it
-  wrap.querySelectorAll('.card-side').forEach(el => el.addEventListener('click', (e) => {
+  const go = (delta) => {
+    sides.forEach(s => saveText(si, s.ei));
+    setDeckPos(scenario, deck.type, pos + delta);
+    el.replaceWith(buildDeckCard(scenario, si, deck, true));
+  };
+  el.querySelector('.dc-next').onclick = (e) => { e.stopPropagation(); if (next) go(1); };
+  el.querySelector('.dc-prev').onclick = (e) => { e.stopPropagation(); if (pos > 0) go(-1); };
+  el.querySelectorAll('.dc-play').forEach(p => p.addEventListener('click', (e) => {
     if (e.target.closest('button')) return;
-    const btn = el.querySelector('.play-btn');
+    const btn = p.querySelector('.play-btn');
     if (!btn.disabled) btn.click();
   }));
-  wrap.querySelector('.card-icon').addEventListener('click', (e) => {
+  el.querySelector('.dc-text').onclick = (e) => {
     e.stopPropagation();
-    setCardFlipped(tile, !tile.classList.contains('flipped'));
-  });
-  wrap.querySelector('.text-btn').addEventListener('click', (e) => {
-    e.stopPropagation();
-    const panels = [...wrap.querySelectorAll('.entry-expanded')];
+    const panels = [...el.querySelectorAll('.entry-expanded')];
     const open = !panels.some(p => p.classList.contains('open'));
     panels.forEach(p => {
       if (!open && p.classList.contains('open')) {
@@ -1683,22 +1934,22 @@ function buildCardTile(scenario, si, card) {
       }
       p.classList.toggle('open', open);
     });
-  });
-  return wrap;
+  };
+  markPlaying(el);
+  return el;
 }
 
-function setCardFlipped(tile, flipped) {
-  if (!tile) return;
-  tile.classList.toggle('flipped', flipped);
-  const key = tile.dataset.flipKey;
-  if (flipped) flippedCards.add(key); else flippedCards.delete(key);
-}
-
-function resetCardFlips() {
-  [...flippedCards].filter(k => k.startsWith(`${currentCampaignId}|`)).forEach(k => flippedCards.delete(k));
-  document.querySelectorAll('.card-tile.flipped').forEach(t => {
-    if (t.querySelector('.card-side.front')) t.classList.remove('flipped');
-  });
+// Re-apply the "playing" highlight after a re-render
+function markPlaying(root) {
+  if (!currentPlayingEntry) return;
+  const item = root.querySelector(`#entry-${currentPlayingEntry}`) || (root.id === `entry-${currentPlayingEntry}` ? root : null);
+  if (!item) return;
+  item.classList.add('playing');
+  const btn = item.querySelector('.play-btn');
+  if (btn) {
+    btn.classList.add('playing-btn');
+    btn.innerHTML = audioEl.paused ? '&#9654;' : '&#9646;&#9646;';
+  }
 }
 
 function getOpenState() {
@@ -1724,6 +1975,11 @@ function renderScenarios() {
 
   panel.innerHTML = '';
   panel.appendChild(buildLibraryToolbar());
+  if (isPlayMode()) {
+    renderPlayMode(panel);
+    markPlaying(panel);
+    return;
+  }
   currentCampaignData.forEach((scenario, si) => {
     const group = document.createElement('div');
     group.className = 'scenario-group';
@@ -1919,13 +2175,9 @@ function renderScenarios() {
       const sgEntries = document.createElement('div');
       sgEntries.className = 'subgroup-entries' + (sgOpen ? ' open' : '');
 
-      if (isPlayMode() && sgName.endsWith('Deck')) {
-        buildCardNodes(scenario, si, indices).forEach(n => sgEntries.appendChild(n));
-      } else {
-        indices.forEach(ei => {
-          sgEntries.appendChild(buildEntryWrapper(scenario, si, scenario.entries[ei], ei));
-        });
-      }
+      indices.forEach(ei => {
+        sgEntries.appendChild(buildEntryWrapper(scenario, si, scenario.entries[ei], ei));
+      });
 
       section.appendChild(sgHeader);
       section.appendChild(sgEntries);
@@ -1947,14 +2199,11 @@ function buildLibraryToolbar() {
   bar.innerHTML = `
     <div class="toolbar-title" title="${escAttr(name)}">${escHtml(name)}</div>
     <div class="toolbar-stats">${withAudio}/${total} with audio</div>
-    ${isPlayMode() ? '<button class="btn btn-secondary" id="resetFlipsBtn" style="padding:5px 12px;font-size:12px" title="Turn every act/agenda card back to its front">Reset cards</button>' : ''}
     <div class="mode-switch" role="tablist" aria-label="View mode">
       <button class="${isPlayMode() ? 'active' : ''}" data-mode="play" title="Titles and play buttons only">&#9654; Play</button>
       <button class="${isPlayMode() ? '' : 'active'}" data-mode="edit" title="Text, generation and organizing tools">&#9998; Edit</button>
     </div>`;
   bar.querySelectorAll('.mode-switch button').forEach(b => b.onclick = () => setViewMode(b.dataset.mode));
-  const reset = bar.querySelector('#resetFlipsBtn');
-  if (reset) reset.onclick = resetCardFlips;
   return bar;
 }
 
@@ -2415,7 +2664,7 @@ function toggleExpand(si, ei) {
 document.addEventListener('click', (e) => {
   document.querySelectorAll('.entry-expanded.open').forEach(exp => {
     // A card's side panels stay open together while you work within the card
-    const cardWrap = exp.closest('.card-tile-wrap');
+    const cardWrap = exp.closest('.keep-open-scope');
     if (cardWrap && cardWrap.contains(e.target)) return;
     if (!exp.contains(e.target) && !(exp.previousElementSibling && exp.previousElementSibling.contains(e.target))) {
       const parts = exp.id.replace('expanded-', '').split('-');
@@ -2457,7 +2706,7 @@ function playEntry(audioPath, label, scenario, entryId) {
     return;
   }
 
-  document.querySelectorAll('.entry-item.playing, .card-side.playing').forEach(el => el.classList.remove('playing'));
+  document.querySelectorAll('.playing').forEach(el => el.classList.remove('playing'));
   document.querySelectorAll('.play-btn.playing-btn').forEach(el => {
     el.classList.remove('playing-btn');
     el.innerHTML = '&#9654;';
@@ -2469,8 +2718,6 @@ function playEntry(audioPath, label, scenario, entryId) {
     const btn = item.querySelector('.play-btn');
     btn.classList.add('playing-btn');
     btn.innerHTML = '&#9646;&#9646;';
-    // Reading a card's front shows the front; reading a back flips it
-    if (item.dataset.side) setCardFlipped(item.closest('.card-tile'), item.dataset.side === 'back');
   }
 
   currentPlayingEntry = entryId;
@@ -2521,18 +2768,12 @@ audioEl.addEventListener('timeupdate', () => {
 });
 
 audioEl.addEventListener('ended', () => {
-  // Finished the front of a card: flip it so the back is ready
-  const finished = currentPlayingEntry && document.getElementById(`entry-${currentPlayingEntry}`);
-  if (finished && finished.dataset.side === 'front') {
-    const tile = finished.closest('.card-tile');
-    if (tile && tile.querySelector('.card-side.back')) setCardFlipped(tile, true);
-  }
   document.getElementById('playerPlayBtn').innerHTML = '&#9654;';
   document.querySelectorAll('.play-btn.playing-btn').forEach(el => {
     el.classList.remove('playing-btn');
     el.innerHTML = '&#9654;';
   });
-  document.querySelectorAll('.entry-item.playing, .card-side.playing').forEach(el => el.classList.remove('playing'));
+  document.querySelectorAll('.playing').forEach(el => el.classList.remove('playing'));
   currentPlayingEntry = null;
 });
 
