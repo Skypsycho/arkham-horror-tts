@@ -34,6 +34,10 @@ tools/cthulhu_svg.py    - Generates static/cthulhu-arms.svg (tapered tentacles w
 tools/cutout_checkerboard.py - Removes a baked-in "transparency" checkerboard from generated art → real transparent PNG
 tools/art_src/          - Original head art (front + profile) the static PNG was cut from
 run.bat                 - Windows launcher
+Dockerfile              - Production image (waitress, code only; data at /storage)
+docker-compose.yml      - Synology Container Manager project: app on :8090 + Watchtower updater
+constraints.txt         - Pinned versions used by the image and CI
+.github/workflows/docker.yml - On push to main: fast tests, then build + push ghcr.io/skypsycho/arkham-horror-tts
 CLAUDE.md               - This file (project context for Claude Code)
 ```
 
@@ -83,7 +87,7 @@ CLAUDE.md               - This file (project context for Claude Code)
 - No account yet → everything redirects to `/setup`, which needs the one-time token printed in the server console (safe even if the instance is already public)
 - `python arkham_tts.py set-password` creates/resets the account; changing the password bumps `session_version`, signing out all sessions
 - Passwords hashed with werkzeug; sessions are permanent cookies (30 days, HttpOnly, SameSite=Lax); 5 failed logins per IP → 15 min lockout
-- Env: `ARKHAM_SECURE_COOKIES=1` (HTTPS only cookies), `ARKHAM_TRUST_PROXY=1` (take client IP from X-Forwarded-For behind a reverse proxy, needed for the lockout)
+- Env: `ARKHAM_SECURE_COOKIES` = `auto` (default: Secure cookie when the request is HTTPS) / `1` / `0`; `ARKHAM_TRUST_PROXY=1` (take client IP from X-Forwarded-For behind a reverse proxy, needed for the lockout)
 - `GET /api/settings` never returns the ElevenLabs key — only `api_key_set` and `api_key_hint` (last 4 chars); `PUT` with a blank key keeps the saved one
 - Frontend wraps `fetch`: any 401 sends the page to `/login`. "Log out" sits next to the credits indicator
 - Tests set `app.config["AUTH_DISABLED"] = True` to bypass login (`tests/test_arkhamdb_import.py`); `tests/test_auth.py` covers the login rules
@@ -143,6 +147,14 @@ CLAUDE.md               - This file (project context for Claude Code)
 - Fallback: if a pack has exactly one `scenario` card, unmatched encounter codes go to that scenario (e.g. Black Stars Rise's `vortex`/`flood` agendas)
 - Cards sharing a name (alternate agenda decks) get the encounter set name appended (label + display) on whichever side's text differs; identical sides are imported once
 - Old campaigns split across multiple packs (e.g., Dunwich: dwl, tmm, tece, bota, uau, wda, litas); newer campaigns have single Campaign Expansion packs (e.g., dwlc)
+
+## Deployment (Synology DS920+)
+- Pushing to `main` deploys: GitHub Actions runs `pytest -m "not pdf"`, builds the image (linux/amd64) and pushes `ghcr.io/skypsycho/arkham-horror-tts:latest` (+ `sha-<commit>`). Watchtower (`nicholas-fedor/watchtower` fork; the original is archived) on the NAS polls every 5 min and restarts the container on a new image. A failing test blocks the deploy
+- No SSH access to the NAS: to debug, ask the user for the container log (Container Manager → Container → arkham-tts → Log)
+- User data lives on the NAS in `/volume1/docker/arkham-tts` (mounted at `/storage`): `data/`, `audio/`, `uploads/`, `settings.json`. The NAS copy is the source of truth; the local copy on the dev PC is a sandbox
+- `ARKHAM_STORAGE` sets that location (default: the code folder). App reachable on the LAN at `http://<nas-ip>:8090`; public access via DSM reverse proxy (HTTPS) → `localhost:8090` with `X-Forwarded-For`/`X-Forwarded-Proto` headers
+- Rollback: revert the commit and push, or pin `image: …:sha-<commit>` in the compose project
+- Changing dependencies: update `constraints.txt` too (the image installs with it)
 
 ## Running the App
 ```bash

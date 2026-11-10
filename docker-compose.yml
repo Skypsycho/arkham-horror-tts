@@ -1,0 +1,35 @@
+# Synology Container Manager project: Project → Create, path docker/arkham-tts,
+# then paste this file. Your data folder is /volume1/docker/arkham-tts.
+#
+#   app         the web app, reachable on http://<nas-ip>:8090 (5000 is DSM's own port)
+#   watchtower  checks GitHub's registry every 5 minutes and restarts the app on a
+#               new image. Only touches containers labelled below.
+
+services:
+  app:
+    image: ghcr.io/skypsycho/arkham-horror-tts:latest
+    container_name: arkham-tts
+    restart: unless-stopped
+    ports:
+      - "8090:5000"
+    volumes:
+      - /volume1/docker/arkham-tts:/storage
+    environment:
+      ARKHAM_STORAGE: /storage
+      # The DSM reverse proxy passes the visitor's IP/scheme in X-Forwarded-* headers
+      ARKHAM_TRUST_PROXY: "1"
+      # Your time zone, for the "generated at" timestamps (defaults to UTC)
+      # TZ: Europe/London
+    labels:
+      com.centurylinklabs.watchtower.enable: "true"
+
+  watchtower:
+    image: ghcr.io/nicholas-fedor/watchtower:latest
+    container_name: arkham-tts-updater
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      WATCHTOWER_LABEL_ENABLE: "true"
+      WATCHTOWER_POLL_INTERVAL: "300"
+      WATCHTOWER_CLEANUP: "true"

@@ -49,6 +49,10 @@ python app.py
 
 Open **http://localhost:5000** in your browser.
 
+### Running on a server (Docker)
+
+A ready-made image is published to `ghcr.io/skypsycho/arkham-horror-tts:latest` on every push to `main`. `docker-compose.yml` runs it with your data in a mounted folder (`ARKHAM_STORAGE`, default the app folder) plus an updater that keeps it current.
+
 The first time, the console prints a one-time setup link (`http://localhost:5000/setup?token=…`). Open it to create the single login account. Forgot the password? Run `python arkham_tts.py set-password`.
 
 On Windows, you can also double-click `run.bat` to install dependencies and start the app in one step.

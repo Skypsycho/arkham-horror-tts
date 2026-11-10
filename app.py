@@ -25,12 +25,16 @@ app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024
 
 BASE_DIR = Path(__file__).parent
-DATA_DIR = BASE_DIR / "data"
-AUDIO_DIR = BASE_DIR / "audio"
-SETTINGS_FILE = BASE_DIR / "settings.json"
+# Where campaigns, audio, PDFs and settings live. Defaults to the code folder;
+# the Docker image points it at a mounted volume so updates never touch it.
+STORAGE_DIR = Path(os.environ.get("ARKHAM_STORAGE") or BASE_DIR)
+DATA_DIR = STORAGE_DIR / "data"
+AUDIO_DIR = STORAGE_DIR / "audio"
+UPLOAD_DIR = STORAGE_DIR / "uploads"
+SETTINGS_FILE = STORAGE_DIR / "settings.json"
 
-DATA_DIR.mkdir(exist_ok=True)
-AUDIO_DIR.mkdir(exist_ok=True)
+DATA_DIR.mkdir(parents=True, exist_ok=True)
+AUDIO_DIR.mkdir(parents=True, exist_ok=True)
 
 
 def auth_file():
@@ -270,8 +274,8 @@ def api_ffg_download():
     campaign_id = re.sub(r"\s+", "_", campaign_id).lower()[:60]
 
     filename = url.rsplit("/", 1)[-1]
-    pdf_path = BASE_DIR / "uploads" / filename
-    pdf_path.parent.mkdir(exist_ok=True)
+    pdf_path = UPLOAD_DIR / filename
+    pdf_path.parent.mkdir(parents=True, exist_ok=True)
 
     already_downloaded = pdf_path.exists()
     if not already_downloaded:
@@ -318,8 +322,8 @@ def api_extract():
     campaign_id = re.sub(r"[^\w\s\-]", "", campaign_name)
     campaign_id = re.sub(r"\s+", "_", campaign_id).lower()[:60]
 
-    pdf_path = BASE_DIR / "uploads" / pdf_file.filename
-    pdf_path.parent.mkdir(exist_ok=True)
+    pdf_path = UPLOAD_DIR / Path(pdf_file.filename).name
+    pdf_path.parent.mkdir(parents=True, exist_ok=True)
     pdf_file.save(str(pdf_path))
 
     try:

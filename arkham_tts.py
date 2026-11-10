@@ -85,6 +85,11 @@ def cmd_voices(args):
     list_voices(api_key)
 
 
+def _storage_dir():
+    """Same location the web app uses (ARKHAM_STORAGE, else this folder)."""
+    return Path(os.environ.get("ARKHAM_STORAGE") or Path(__file__).resolve().parent)
+
+
 def _find_guide_pdf(campaign_id, base_dir):
     """Locate the uploaded PDF for a library campaign via the FFG catalog."""
     import re
@@ -101,7 +106,7 @@ def cmd_merge(args):
     import time
     from merge import format_report, merge_campaign
 
-    base = Path(__file__).resolve().parent
+    base = _storage_dir()
     data_path = base / "data" / f"{args.campaign_id}.json"
     if not data_path.exists():
         print(f"Error: campaign not found: {data_path}")
@@ -144,7 +149,7 @@ def cmd_merge(args):
 
 def cmd_set_password(args):
     import auth
-    auth.cli_set_password(Path(__file__).parent / "data" / "_auth.json")
+    auth.cli_set_password(_storage_dir() / "data" / "_auth.json")
 
 
 def main():

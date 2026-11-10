@@ -131,3 +131,13 @@ def test_settings_blank_key_keeps_saved_key(account):
     assert saved["api_key"] == "sk_secret_value_1234" and saved["voice_id"] == "v2"
     c.put("/api/settings", json={"api_key": "sk_new_key_9999"})
     assert json.loads(appmod.SETTINGS_FILE.read_text())["api_key"] == "sk_new_key_9999"
+
+
+def test_cookie_secure_only_over_https(account):
+    c = appmod.app.test_client()
+    r = c.post("/login", data={"username": "sky", "password": "correct horse"})
+    assert "Secure" not in r.headers["Set-Cookie"]
+    c2 = appmod.app.test_client()
+    r = c2.post("/login", data={"username": "sky", "password": "correct horse"},
+                base_url="https://arkham.example")
+    assert "Secure" in r.headers["Set-Cookie"]

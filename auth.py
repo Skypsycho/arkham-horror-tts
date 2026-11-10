@@ -123,8 +123,8 @@ def _get_setup_token():
     global _setup_token
     if _setup_token is None:
         _setup_token = secrets.token_urlsafe(24)
-        print("\n  No login account yet. Create one here (one-time link):")
-        print(f"  http://localhost:5000/setup?token={_setup_token}\n", flush=True)
+        print("\n  No login account yet. Open /setup?token=... on the app's address")
+        print(f"  to create it (one-time link), e.g. http://localhost:5000/setup?token={_setup_token}\n", flush=True)
     return _setup_token
 
 
@@ -136,7 +136,18 @@ def init_app(app, auth_path_fn):
     app.secret_key = _secret_key(auth_path_fn())
     app.config.setdefault("SESSION_COOKIE_HTTPONLY", True)
     app.config.setdefault("SESSION_COOKIE_SAMESITE", "Lax")
-    app.config["SESSION_COOKIE_SECURE"] = os.environ.get("ARKHAM_SECURE_COOKIES") == "1"
+    # "auto" (default): HTTPS-only cookie when the request came in over HTTPS
+    # (e.g. via the reverse proxy), plain cookie on the home network over HTTP
+    secure_mode = os.environ.get("ARKHAM_SECURE_COOKIES", "auto")
+    app.config["SESSION_COOKIE_SECURE"] = secure_mode == "1"
+    if secure_mode == "auto":
+        from flask.sessions import SecureCookieSessionInterface
+
+        class _AutoSecureSessions(SecureCookieSessionInterface):
+            def get_cookie_secure(self, app):
+                return request.is_secure
+
+        app.session_interface = _AutoSecureSessions()
     app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(days=30)
 
     if os.environ.get("ARKHAM_TRUST_PROXY") == "1":

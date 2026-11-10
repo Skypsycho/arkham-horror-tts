@@ -1,0 +1,20 @@
+# Only code goes into the image; user data is mounted at /storage
+.git
+.github
+.claude
+.pytest_cache
+__pycache__
+*.pyc
+audio/
+uploads/
+data/
+settings.json
+tests/
+tools/
+Banner.jpg
+Banner2.jpg
+Banner3.jpg
+Banner4.jpg
+voice_sample_*.mp3
+*.sections.json
+test_*.json
