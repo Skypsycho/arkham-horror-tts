@@ -1009,6 +1009,32 @@ body.mode-edit .entry-wrapper.card-back .entry-info .label::before {
   .dc-name { font-size: 26px; }
 }
 
+/* Small screens such as Tabletop Simulator's tablet (~1024×600): tighter
+   spacing so a scenario's intro and both cards fit without scrolling */
+@media (max-height: 760px) {
+  .tabs { padding-top: 8px; padding-bottom: 8px; }
+  .library-toolbar { padding-top: 6px; padding-bottom: 6px; }
+  .play-scenario { padding-top: 10px; padding-bottom: 20px; }
+  .ps-head { margin-bottom: 10px; }
+  .ps-head h2 { font-size: 22px; }
+  .ps-intros { margin-bottom: 12px; }
+  .intro-btn.primary { padding: 5px 22px 5px 5px; font-size: 18px; }
+  .intro-btn.primary .play-btn { width: 40px; height: 40px; font-size: 14px; }
+  .ps-decks { margin-bottom: 16px; }
+  .deck-card { min-height: 0; padding: 12px 16px 14px; }
+  .dc-name { padding: 12px 6px; font-size: 25px; }
+  .dc-side { margin-bottom: 10px; }
+  .play-scenario .play-btn { width: 36px; height: 36px; font-size: 13px; }
+  .dc-next { padding: 10px 16px; }
+  .player-bar { min-height: 46px; padding-top: 6px; padding-bottom: 6px; }
+}
+
+@media (max-width: 1100px) {
+  .campaign-list { width: 210px; }
+  .ps-head { gap: 10px; }
+  .ps-head h2 { font-size: 21px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+}
+
 /* ── Audio Player Bar ── */
 .player-bar {
   background: rgba(22, 33, 62, 0.92);
@@ -2049,7 +2075,7 @@ function renderPlayScenario(panel, si) {
   head.className = 'ps-head';
   head.innerHTML = `
     <button class="ps-back" title="Back to the scenario list">&#8249; Scenarios</button>
-    <h2>${escHtml(scenario.scenario)}</h2>
+    <h2 title="${escAttr(scenario.scenario)}">${escHtml(scenario.scenario)}</h2>
     <div class="ps-nav">
       <button class="ps-step" data-step="-1" ${prevS ? `title="Previous: ${escAttr(prevS.scenario)}"` : 'disabled title="This is the first scenario"'}>&#8249; Previous</button>
       <button class="ps-step" data-step="1" ${nextS ? `title="Next: ${escAttr(nextS.scenario)}"` : 'disabled title="This is the last scenario"'}>Next &#8250;</button>
