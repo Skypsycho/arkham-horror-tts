@@ -172,7 +172,8 @@ header {
     var(--bg3);
 }
 .cthulhu-mark { position: absolute; top: 0; right: 0; bottom: 0; left: 0; pointer-events: none; overflow: hidden; }
-.cthulhu-mark .cth-arms { position: absolute; left: 0; top: 0; width: 260px; height: 70px; }
+/* drawn for a 260×70 row; stretches to the row's width (narrower sidebar on small screens) */
+.cthulhu-mark .cth-arms { position: absolute; left: 0; top: 0; width: 100%; height: 70px; }
 .cthulhu-mark .cth-skin { fill: url(#cthArm); stroke: #3f8f74; stroke-width: .6; stroke-opacity: .55; filter: url(#cthFlesh); }
 .cthulhu-mark .cth-cups circle { fill: #10171a; stroke: #9fb3a6; stroke-width: .35; stroke-opacity: .7; }
 .cthulhu-mark .cth-tentacle { transform-box: view-box; opacity: .95;
@@ -1789,6 +1790,9 @@ function addCthulhu(el, campaignId) {
       ${cthulhuArmsSvg}
       <div class="cth-art"><img src="${CTHULHU_ART.src}" alt="">${eyes}</div>
     </div>`);
+  // Stretch rather than crop when the sidebar is narrower than the 260px the arms are drawn for
+  const arms = el.querySelector('.cthulhu-mark svg');
+  if (arms) arms.setAttribute('preserveAspectRatio', 'none');
   if (cthulhuShownFor === campaignId) el.querySelector('.cthulhu-mark').classList.add('no-grow');
   cthulhuShownFor = campaignId;
 }
