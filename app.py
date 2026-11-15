@@ -179,6 +179,7 @@ def _get_campaigns():
             "scenarios": data,
             "total_entries": total,
             "generated_entries": generated,
+            "has_guide": _guide_for_campaign(campaign_id) is not None,
         })
 
     order = meta.get("_order", [])
@@ -254,6 +255,86 @@ FFG_CAMPAIGN_GUIDES = [
     {"name": "Brethren of Ash", "url": "https://cdn.svc.asmodee.net/production-fantasyflightgames/uploads/2026/09/ahc100_campaign_guide-web.pdf"},
     {"name": "Children of Blood", "url": "https://cdn.svc.asmodee.net/production-fantasyflightgames/uploads/2026/09/ahc106_campaign_guide-web.pdf"},
 ]
+
+
+def _guide_for_campaign(campaign_id):
+    """The FFG catalog guide a library campaign was imported from, if any."""
+    for g in FFG_CAMPAIGN_GUIDES:
+        gid = re.sub(r"\s+", "_", re.sub(r"[^\w\s\-]", "", g["name"])).lower()[:60]
+        if gid == campaign_id:
+            return g
+    return None
+
+
+def _ensure_guide_pdf(guide):
+    """Local path of a catalog guide PDF, downloading it first if needed."""
+    pdf_path = UPLOAD_DIR / guide["url"].rsplit("/", 1)[-1]
+    if not pdf_path.exists():
+        import urllib.request
+        pdf_path.parent.mkdir(parents=True, exist_ok=True)
+        req = urllib.request.Request(guide["url"], headers={"User-Agent": "ArkhamTTS/1.0"})
+        with urllib.request.urlopen(req, timeout=120) as r:
+            data = r.read()
+        tmp = pdf_path.with_suffix(".part")
+        tmp.write_bytes(data)
+        tmp.replace(pdf_path)
+    return pdf_path
+
+
+@app.route("/api/campaign/<campaign_id>/merge-extraction", methods=["POST"])
+def api_merge_extraction(campaign_id):
+    """Re-extract the campaign's guide and merge it into the library entry,
+    keeping edits, audio and ArkhamDB cards (see merge.py). Preview by
+    default; {"apply": true} backs the file up and saves."""
+    from merge import ACTION_TITLES, merge_campaign
+
+    path = DATA_DIR / f"{campaign_id}.json"
+    if not path.exists():
+        return jsonify({"error": "Campaign not found"}), 404
+    guide = _guide_for_campaign(campaign_id)
+    if not guide:
+        return jsonify({"error": "This campaign wasn't imported from a Fantasy Flight guide, so there's nothing to re-read."}), 400
+    apply = bool((request.get_json(silent=True) or {}).get("apply"))
+
+    try:
+        pdf_path = _ensure_guide_pdf(guide)
+    except Exception as e:
+        return jsonify({"error": f"Download failed: {e}"}), 500
+    try:
+        extracted = extract_sections(str(pdf_path))
+    except Exception as e:
+        return jsonify({"error": f"Extraction failed: {e}"}), 500
+
+    with open(path, encoding="utf-8") as f:
+        existing = json.load(f)
+    has_audio = lambda e: bool(e.get("audio_file")) and (AUDIO_DIR / e["audio_file"]).exists()
+    merged, report = merge_campaign(existing, extracted, has_audio)
+    changed = merged != existing
+
+    sections = []
+    for action, title in ACTION_TITLES:
+        items = [{"scenario": r["scenario"], "label": r["label"], "detail": r["detail"]}
+                 for r in report if r["action"] == action]
+        if items:
+            sections.append({"action": action, "title": title, "items": items})
+
+    result = {
+        "changed": changed,
+        "sections": sections,
+        "entries_before": sum(len(s["entries"]) for s in existing),
+        "entries_after": sum(len(s["entries"]) for s in merged),
+        "applied": False,
+    }
+    if apply and changed:
+        backup_dir = DATA_DIR / "_backups"
+        backup_dir.mkdir(exist_ok=True)
+        backup = backup_dir / f"{campaign_id}-{time.strftime('%Y%m%d-%H%M%S')}.json"
+        shutil.copy2(path, backup)
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(merged, f, indent=2, ensure_ascii=False)
+        result["applied"] = True
+        result["backup"] = f"data/_backups/{backup.name}"
+    return jsonify(result)
 
 
 @app.route("/api/ffg-campaigns")

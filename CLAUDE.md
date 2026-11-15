@@ -76,6 +76,7 @@ CLAUDE.md               - This file (project context for Claude Code)
 - Entries with audio on disk: text and scenario never changed (reported instead); labels may still upgrade
 - Moves entries to the scenario the extractor now assigns, except audio entries and the only entry of a group (likely deliberate grouping)
 - Removes old fragments now contained in a merged entry (no audio only); adds new passages after their extraction-order predecessor; never touches ArkhamDB card entries (Deck subgroups / page 0); unmatched entries are reported, not deleted
+- Also in the web UI: Edit mode toolbar → "⟳ Update from guide" (only for campaigns from the FFG catalog, `has_guide` in `/api/library`) → `POST /api/campaign/<id>/merge-extraction` previews; `{"apply": true}` backs up and saves. Downloads the guide PDF to `uploads/` if missing (`_ensure_guide_pdf`). This is how to apply extractor fixes on the NAS (no SSH)
 - Note: `/api/ffg-download` still **overwrites** the campaign file — use merge for an existing campaign
 
 ### Entry Label Detection (`_detect_entry_label`)
@@ -140,6 +141,7 @@ CLAUDE.md               - This file (project context for Claude Code)
 - **Old-browser support (Tabletop Simulator tablet = Chrome 74)**: avoid CSS newer than Chrome 74 without a fallback line first (`min()`/`max()`/`clamp()`, `inset`, `aspect-ratio`, `color-mix()`, `:focus-visible` inside a selector list) and JS newer than ES2019 (`?.`, `??`, `replaceAll`, `.at()`). Flex `gap` is unsupported there: `flexGapFallback()` at the top of the script detects it and re-applies gaps as child margins (remembered in `data-gapmargin-*`; only written when the value changes, since clearing and re-setting margins made `transition: all` elements wobble; player-bar text changes are ignored). The header banner sits in an absolutely-filled wrapper so it can't set the header's height. The tablet viewport is ~1024×600: `@media (max-height: 760px)` and `(max-width: 1100px)` compact the Play view so intro + both cards fit without scrolling
 - **Custom banner and background**: Banner5.jpg header image, Background.jpg full-page background with semi-transparent UI panels
 - **Entry text auto-save**: text saves automatically on collapse or click-away (no Save button needed)
+- **Update from guide dialog** (`#mergeDialog`, native `<dialog>` reusing `.help-dialog` styles): fixed height/position because Chrome 74 places a modal dialog once at its opening size and the report arrives later. Change sections first, then "left alone" notes (`MERGE_SECTIONS` / `MERGE_CHANGES`)
 - **Confirmation modal**: used for all delete operations (campaigns, groups, subgroups, entries) with "Keep audio files on disk" checkbox (default: checked)
 
 ### ArkhamDB Integration
@@ -185,6 +187,7 @@ python -m pytest -m "not pdf"   # fast unit + ArkhamDB tests only
 - `tests/test_arkhamdb_import.py` — import endpoint with saved pack responses in `tests/fixtures/` (no network)
 - `tests/test_auth.py` — login, setup token, lockout, logout, API key never returned
 - `tests/test_generate_bulk.py` — bulk generation scope, skipping, edits during a job, one job per campaign (fake TTS)
+- `tests/test_merge_endpoint.py` — Update from guide endpoint (preview, apply + backup, non-catalog campaigns)
 - `tests/test_merge.py` — merge rules on synthetic campaigns (edits/audio/cards protected, moves, fragments, additions)
 - Run the suite after any change to `extract.py`; fixes for one campaign often regress another
 
@@ -195,6 +198,7 @@ python -m pytest -m "not pdf"   # fast unit + ArkhamDB tests only
 - `POST /api/reorder-campaigns` - Set campaign display order
 - `GET /api/ffg-campaigns` - List available FFG campaign guide PDFs
 - `POST /api/ffg-download` - Download FFG campaign guide PDF and extract sections
+- `POST /api/campaign/<id>/merge-extraction` - Re-extract the campaign's FFG guide and merge it in (preview; `apply: true` saves with a backup)
 - `POST /api/extract` - Upload PDF and extract sections (multipart form)
 - `POST /api/generate/<id>` - Bulk generate missing audio (background job, returns job_id + total); optional `scenario_idx` / `subgroup` scope
 - `GET /api/generate/status/<job_id>` - Poll bulk generation progress

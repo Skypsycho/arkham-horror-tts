@@ -1401,6 +1401,25 @@ input:focus { outline: none; border-color: var(--accent); }
   overflow: hidden;
 }
 .help-dialog[open] { display: flex; flex-direction: column; }
+/* Fixed size and position: its content arrives after opening, and Chrome 74
+   places a modal dialog once, at its size when opened */
+.merge-dialog { width: 620px; height: 80vh; position: fixed; top: 0; bottom: 0; }
+.merge-dialog .merge-body { flex: 1; min-height: 0; }
+.merge-body { padding: 16px 22px; overflow-y: auto; font-size: 13px; line-height: 1.5; color: var(--text2); }
+.merge-body .mg-lead { color: var(--text); font-size: 14px; margin-bottom: 12px; }
+.merge-body .mg-loading { padding: 30px 0; text-align: center; color: var(--text2); animation: pulse 1.4s ease-in-out infinite; }
+.merge-body .mg-error { color: var(--danger); }
+.merge-body .mg-done { color: var(--success); }
+.merge-body h4 { margin: 14px 0 6px; font-size: 12px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; color: var(--accent); }
+.merge-body h4.mg-note { color: var(--text2); }
+.merge-body ul { list-style: none; margin: 0; padding: 0; }
+.merge-body li { padding: 4px 0 4px 10px; border-left: 2px solid var(--border); margin-bottom: 3px; }
+.merge-body li .mg-where { color: var(--text2); font-size: 11px; }
+.merge-body li .mg-label { color: var(--text); }
+.merge-body li .mg-detail { display: block; font-size: 12px; }
+.merge-foot { display: flex; justify-content: flex-end; gap: 8px; padding: 12px 22px; border-top: 1px solid var(--border); background: var(--surface); }
+.update-guide-btn { color: var(--accent); }
+.update-guide-btn:hover { background: var(--accent2); border-color: var(--accent2); color: #fff; }
 .help-dialog::backdrop { background: rgba(0,0,0,0.6); }
 
 .help-head {
@@ -1690,6 +1709,7 @@ input:focus { outline: none; border-color: var(--accent); }
       <li><span class="help-key">&#9998;</span> renames entries, scenarios and groups. Drag the handles to reorder or move entries between scenarios.</li>
       <li><span class="help-key">&#9889;</span> generates audio for one entry, <span class="help-key">&#8635;</span> regenerates it, and <span class="help-key">&#128206;</span> attaches your own recording instead.</li>
       <li><span class="help-key">&#9889; Generate all</span> in the toolbar generates every entry that has no audio yet. Hover a scenario or a group (such as an Agenda or Act deck) for its own <span class="help-key">&#9889;</span>. It shows how many characters it will use before it starts, and skips entries that already have audio.</li>
+      <li><span class="help-key">&#10227; Update from guide</span> re-reads the campaign guide when the app gets better at reading it. It shows what would change first, keeps your edits, recordings and agenda/act cards, and saves a backup before applying.</li>
       <li>Deleting asks first, and keeps the audio files by default.</li>
     </ul>
 
@@ -1699,6 +1719,19 @@ input:focus { outline: none; border-color: var(--accent); }
       <li>The player at the bottom shows what's playing. Click its progress bar to jump.</li>
       <li>Only you can log in. <span class="help-key">Log out</span> is next to the credits bar.</li>
     </ul>
+  </div>
+</dialog>
+
+<!-- Update a campaign from its guide (re-extract + merge) -->
+<dialog class="help-dialog merge-dialog" id="mergeDialog" aria-labelledby="mergeTitle">
+  <div class="help-head">
+    <h2 id="mergeTitle">Update from guide</h2>
+    <button class="help-close" id="mergeClose" aria-label="Close" title="Close (Esc)">&#10005;</button>
+  </div>
+  <div class="merge-body" id="mergeBody"></div>
+  <div class="merge-foot">
+    <button class="btn btn-secondary" id="mergeCancel">Cancel</button>
+    <button class="btn btn-primary" id="mergeApply" style="display:none">Apply changes</button>
   </div>
 </dialog>
 
@@ -1811,6 +1844,7 @@ let currentCampaignId = null;
 let currentCampaignData = null;
 let currentPlayingEntry = null;
 const campaignNames = {};
+const campaignHasGuide = {};  // imported from a Fantasy Flight guide → can be re-read and merged
 
 // Cthulhu marker for the selected campaign: painted head (side view) + inline
 // SVG arms (inline so they can animate). Eye positions are % of the image.
@@ -1891,6 +1925,7 @@ async function loadLibrary() {
 
   campaigns.forEach((c, idx) => {
     campaignNames[c.id] = c.full_name;
+    campaignHasGuide[c.id] = !!c.has_guide;
     const el = document.createElement('div');
     el.className = 'campaign-item' + (currentCampaignId === c.id ? ' active' : '');
     el.draggable = true;
@@ -2553,7 +2588,9 @@ function buildLibraryToolbar() {
   const missing = missingAudioEntries(null).length;
   const genAll = isPlayMode() ? '' : `
     <button class="gen-all-btn${bulkJobRunning() ? ' busy' : missing ? '' : ' none'}"
-      title="${missing ? `Generate audio for every entry without audio (${missing})` : 'Every entry has audio'}">&#9889;<span class="ga-label"> Generate all</span>${missing ? ` (${missing})` : ''}</button>`;
+      title="${missing ? `Generate audio for every entry without audio (${missing})` : 'Every entry has audio'}">&#9889;<span class="ga-label"> Generate all</span>${missing ? ` (${missing})` : ''}</button>` +
+    (campaignHasGuide[currentCampaignId] ? `
+    <button class="gen-all-btn update-guide-btn" title="Re-read the campaign guide and merge improvements, keeping your edits, audio and cards">&#10227;<span class="ga-label"> Update from guide</span></button>` : '');
   bar.innerHTML = `
     <div class="toolbar-title" title="${escAttr(name)}">${escHtml(name)}</div>
     <div class="toolbar-stats">${withAudio}/${total} with audio</div>${genAll}
@@ -2564,6 +2601,8 @@ function buildLibraryToolbar() {
   bar.querySelectorAll('.mode-switch button').forEach(b => b.onclick = () => setViewMode(b.dataset.mode));
   const genAllBtn = bar.querySelector('.gen-all-btn');
   if (genAllBtn) genAllBtn.onclick = () => { if (missing) confirmBulkGenerate(null, null); };
+  const updateBtn = bar.querySelector('.update-guide-btn');
+  if (updateBtn) updateBtn.onclick = () => openMergeDialog(currentCampaignId);
   if (bulkJob && bulkJob.campaignId === currentCampaignId) bar.appendChild(buildBulkProgress());
   return bar;
 }
@@ -3720,6 +3759,93 @@ function confirmDeleteEntry(si, ei, entryLabel, scenarioName) {
     true
   );
 }
+
+// ── Update from guide: re-extract the PDF and merge it in (merge.py) ──
+const MERGE_SECTIONS = {
+  // changes
+  'relabel': 'Renamed',
+  'update-text': 'Text updated',
+  'move': 'Moved to the right scenario',
+  'add': 'New passages',
+  'remove-fragment': 'Removed: now part of a longer passage',
+  // left alone
+  'keep-edited': 'Left alone: you edited the text',
+  'text-available': 'Left alone: has audio, but the guide text is now longer or cleaner (regenerate to use it)',
+  'move-skipped': 'Left where you put it',
+  'fragment-kept': 'Left alone: a fragment that has audio',
+  'add-skipped': 'Not added',
+  'unmatched': 'Not found in the guide (left as is; rules text, or added by you?)',
+};
+const MERGE_CHANGES = ['relabel', 'update-text', 'move', 'add', 'remove-fragment'];
+const mergeDialog = document.getElementById('mergeDialog');
+let mergeCampaign = null;
+
+function mergeBusy(text) {
+  document.getElementById('mergeBody').innerHTML = `<div class="mg-loading">${escHtml(text)}</div>`;
+  document.getElementById('mergeApply').style.display = 'none';
+}
+
+function openMergeDialog(campaignId) {
+  mergeCampaign = campaignId;
+  document.getElementById('mergeCancel').textContent = 'Cancel';
+  mergeDialog.showModal();
+  runMerge(false);
+}
+
+async function runMerge(apply) {
+  const campaignId = mergeCampaign;
+  mergeBusy(apply ? 'Saving…' : 'Reading the campaign guide… this can take up to a minute.');
+  let data;
+  try {
+    const res = await fetch(`/api/campaign/${campaignId}/merge-extraction`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ apply }),
+    });
+    data = await res.json();
+  } catch (e) {
+    data = { error: 'Network error: ' + e.message };
+  }
+  if (mergeCampaign !== campaignId || !mergeDialog.open) return;
+  const body = document.getElementById('mergeBody');
+  const applyBtn = document.getElementById('mergeApply');
+  if (data.error) {
+    body.innerHTML = `<p class="mg-error">${escHtml(data.error)}</p>`;
+    return;
+  }
+
+  let html = '';
+  if (data.applied) {
+    html += `<p class="mg-lead mg-done">Done. ${data.entries_before} → ${data.entries_after} entries. ` +
+      `A backup of the old version is in <code>${escHtml(data.backup)}</code>.</p>`;
+  } else if (!data.changed) {
+    html += `<p class="mg-lead">Already up to date: the guide has nothing new for this campaign.</p>`;
+  } else {
+    html += `<p class="mg-lead">These changes come from improvements in reading the guide. ` +
+      `Your own edits, recordings and agenda/act cards are kept. Nothing is saved until you click Apply.</p>`;
+  }
+  data.sections.forEach(sec => {
+    const isChange = MERGE_CHANGES.indexOf(sec.action) !== -1;
+    if (data.applied && !isChange) return;
+    html += `<h4 class="${isChange ? '' : 'mg-note'}">${escHtml(MERGE_SECTIONS[sec.action] || sec.title)} (${sec.items.length})</h4><ul>` +
+      sec.items.map(it => `<li><span class="mg-where">${escHtml(it.scenario)}</span> · <span class="mg-label">${escHtml(it.label)}</span>` +
+        (it.detail ? `<span class="mg-detail">${escHtml(it.detail)}</span>` : '') + `</li>`).join('') +
+      `</ul>`;
+  });
+  body.innerHTML = html;
+  applyBtn.style.display = (data.changed && !data.applied) ? '' : 'none';
+  document.getElementById('mergeCancel').textContent = data.changed && !data.applied ? 'Cancel' : 'Close';
+
+  if (data.applied) {
+    loadLibrary();
+    if (currentCampaignId === campaignId) refreshAndRender();
+  }
+}
+
+document.getElementById('mergeApply').onclick = () => runMerge(true);
+document.getElementById('mergeCancel').onclick = () => mergeDialog.close();
+document.getElementById('mergeClose').onclick = () => mergeDialog.close();
+mergeDialog.addEventListener('click', (e) => { if (e.target === mergeDialog) mergeDialog.close(); });
 
 // ── Help dialog (Esc closes it natively) ──
 const helpDialog = document.getElementById('helpDialog');
