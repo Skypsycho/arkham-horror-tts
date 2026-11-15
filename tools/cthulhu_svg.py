@@ -5,7 +5,7 @@
 The head itself is a painted image (static/cthulhu-front.png and
 static/cthulhu-profile.png, cut out with tools/cutout_checkerboard.py). This
 script draws the two long arms that reach from behind it along the top and
-bottom of the selected row, plus a short one, and writes them to
+bottom of the selected row, plus shorter ones and a pair reaching to the far end, and writes them to
 static/cthulhu-arms.svg, which templates/index.html inlines so the arms can
 animate. Colours and animation live in the .cthulhu-mark CSS in index.html.
 """
@@ -107,6 +107,12 @@ ARMS = [
      7.8, 0.8, 4.6, 1.25, -1, -1, 10),
     ("t-mid", S((32, 52), (46, 64), (64, 58), (80, 60), (92, 62), (102, 66), (114, 62)),
      5.0, 0.6, 3.0, 1.1, -1, -1, 6),
+    # a pair reaching past the name to the right end of the row and closing
+    # around it like a pincer: one comes down from the top, one up from below
+    ("t-whip", S((30, 20), (70, -2), (120, 6), (160, 9), (200, 12), (238, 4), (244, 27)),
+     5.0, 0.6, 3.6, 1.2, 1, 1, 8),
+    ("t-beard", S((30, 54), (72, 72), (124, 70), (168, 68), (206, 67), (246, 72), (250, 46)),
+     5.4, 0.6, 3.6, 1.2, -1, -1, 8),
 ]
 
 
