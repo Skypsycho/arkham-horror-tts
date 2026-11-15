@@ -22,6 +22,12 @@ from extract import (
     ("Sebastien’s Information:", "Sebastien’s Information"),
     ("If Dr. Francis Morgan is not listed under “Sacrificed to Yog‑Sothoth:”", "Dr. Francis Morgan"),
     ("If Earl Sawyer is not listed under “Sacrificed to Yog‑Sothoth:”", "Earl Sawyer"),
+    # a "continue to Dream 8." reference glued onto the next label
+    ("Dream 8.Dream 11:", "Dream 11"),
+    ("Dream 10.Dream 12:", "Dream 12"),
+    ("Dr. Francis Morgan’s Notes:", "Dr. Francis Morgan’s Notes"),
+    # supply-point table rows
+    ("4 investigators:", None),
     # game-mechanics instructions are not labels
     ("Setup:", None),
     ("Proceed to:", None),

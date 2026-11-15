@@ -28,9 +28,9 @@ JUNK = [
 
 @pytest.mark.parametrize("key, scenarios, max_unlabeled", [
     ("zealot", 3, 0),
-    ("dunwich", 12, 4),
-    ("carcosa", 12, 2),
-    ("forgotten", 16, 8),
+    ("dunwich", 12, 3),
+    ("carcosa", 12, 0),
+    ("forgotten", 17, 6),
     ("brethren", 5, 7),
 ])
 def test_shape(guide, key, scenarios, max_unlabeled):
@@ -97,6 +97,12 @@ def test_dunwich_survivor_labels(guide):
     assert labels[0] == "Intro"
 
 
+def test_dunwich_short_resolution(guide):
+    # 87 characters, right after "Resolution 2 (read Investigator Defeat first!):"
+    scen, e = guide("dunwich").find("Rattled, you begin walking alongside the train tracks")
+    assert scen.startswith("Scenario III") and e["display_label"] == "Resolution 2"
+
+
 def test_dunwich_scenario_intros(guide):
     g = guide("dunwich")
     for scen in ["I–A", "II:", "III:", "IV:", "V:", "VII:"]:
@@ -116,6 +122,45 @@ def test_carcosa_dream_2_kept(guide):
     _, e = guide("carcosa").find("Constance takes your hand")
     assert e["display_label"] == "Dream 2"
     assert e["text"].endswith("For celebration!”")
+
+
+def test_carcosa_short_dreams_kept(guide):
+    # Under 100 characters, but right after their own label
+    g = guide("carcosa")
+    _, e = g.find("Daniel’s voice calls out to you.")
+    assert e["display_label"] == "Dream 13"
+    # A bold "Dream 1" inside the sentence doesn't split it
+    _, e = g.find("You peer in the mirror, and your reflection")
+    assert e["display_label"] == "Dream 5"
+    assert e["text"].endswith("this isn’t Dream 1,” you say.")
+
+
+def test_carcosa_dream_labels_not_glued_to_references(guide):
+    labels = guide("carcosa").labels("Phantom of Truth")
+    assert {"Dream 11", "Dream 12"} <= set(labels)
+    assert not any("." in l for l in labels if l.startswith("Dream"))
+    assert sorted(l for l in labels if l.startswith("Dream ")) == sorted(f"Dream {n}" for n in range(1, 14))
+
+
+def test_carcosa_handwriting_read(guide):
+    # Daniel's notes in the margins are set in a script font
+    g = guide("carcosa")
+    possessed = [e for s, e in g.entries() if e["display_label"] == "Daniel Was Possessed"][0]
+    assert "Carcosa is real Do not let them open the path" in possessed["text"]
+    assert "Hastur is the king in tatters" in possessed["text"]
+    assert possessed["text"].endswith("play out in your mind over and over again.")
+    assert "*" not in possessed["text"]
+    res = [e for s, e in g.entries() if s.startswith("Scenario V:") and e["display_label"] == "Resolution 1"][0]
+    assert res["text"].endswith("it reads: He is already here.")
+
+
+def test_carcosa_intro_flows_to_next_column(guide):
+    # Phantom of Truth Intro 1 ends at the bottom of p17's left column and
+    # carries on at the top of the right one
+    _, e = guide("carcosa").find("Several months have passed since")
+    assert e["display_label"] == "Intro 1"
+    assert e["text"].endswith("black stars, twin suns, shattered moons, and twisted spires.")
+    assert "You’ve found the records those investigators kept" in e["text"]
 
 
 def test_carcosa_inline_title_absorbed(guide):
@@ -152,7 +197,7 @@ def test_forgotten_boundary_beyond_frames(guide):
     ("The boundary along the horizon shimmers", "Scenario IV"),
     ("Somehow, despite the odds stacked against you", "Scenario VII"),
     ("The hazards of the jungle are too dangerous", "Scenario V–A"),
-    ("There is only one way to stop all of this", "Scenario VIII"),
+    ("There is only one way to stop all of this", "Epilogue"),  # shares p37 with Scenario IX
     ("Though you long for a proper bed", "Interlude IV"),
     # and the new scenario's own content stays put
     ("Once more, you venture south", "Interlude III"),
@@ -161,6 +206,36 @@ def test_forgotten_boundary_beyond_frames(guide):
 def test_forgotten_header_position(guide, text_start, scenario):
     scen, _ = guide("forgotten").find(text_start)
     assert scen.startswith(scenario)
+
+
+def test_forgotten_epilogue(guide):
+    g = guide("forgotten")
+    assert g.names[-2:] == ["Scenario IX: Turn Back Time", "Epilogue"]
+    assert g.labels("Epilogue") == ["Epilogue"]
+
+
+def test_forgotten_prologue_label(guide):
+    # Not "4 investigators" from the supply table in the other column
+    assert guide("forgotten").labels("Prologue") == ["Campaign Intro", "Prologue"]
+
+
+def test_forgotten_eztli_defeat_variants(guide):
+    labels = guide("forgotten").labels("Doom of Eztli")
+    assert "Investigator Defeat (if there are four or more tally marks under “Yig’s Fury”)" in labels
+    assert "Investigator Defeat (if there are three or fewer tally marks under “Yig’s Fury”)" in labels
+    # "Go to Resolution 2." is a reference, not a label
+    assert labels.count("Resolution 2") == 1
+
+
+def test_forgotten_conditions_not_read(guide):
+    g = guide("forgotten")
+    for _, e in g.entries():
+        assert not e["text"].startswith("If "), e["text"][:80]
+        assert not re.search(r"If the investigators [^.!?]*$", e["text"]), e["text"][-80:]
+    _, e = g.find("The loss of the Eztli relic weighs heavily")
+    assert e["text"].endswith("but for what purpose?")
+    _, e = g.find("Your hand traces over the lines carved")
+    assert e["text"].endswith("since you have seen natural light.")
 
 
 def test_forgotten_card_subtitles_not_glued(guide):

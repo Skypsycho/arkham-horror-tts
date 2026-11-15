@@ -48,7 +48,7 @@ CLAUDE.md               - This file (project context for Claude Code)
 - Teutonic size >= 16 = scenario headers (Scenario, Part, Interlude, Codex, Prologue, Epilogue, Design Notes)
 - Teutonic size 12-15 = sub-headers (Codex entries), treated as bold/label blocks in `_extract_page_blocks`
 - Two-column PDF layouts: blocks processed in native pdfplumber order (NOT sorted by Y-position — sorting interleaves columns)
-- Scenario headers pre-scanned from Teutonic font chars (`_prescan_scenarios`), then blocks processed page-by-page
+- Scenario headers pre-scanned from Teutonic font chars (`_prescan_scenarios` → page → [(name, (x0, top))] in reading order; a page can hold two, e.g. Forgotten Age p37: Epilogue + Secret Scenario IX), then blocks processed page-by-page. Each block goes to the last header it doesn't precede (or the previous scenario)
 - Page 1 is processed if it contains narrative blocks (e.g., Night of the Zealot intro); otherwise skipped (cover page)
 - "Ungrouped" entries (narrative before the first detected scenario) are reassigned to the first real scenario
 - Resolution pages after Codex pages auto-associate back to parent scenario via `last_main_scenario` tracking
@@ -60,7 +60,11 @@ CLAUDE.md               - This file (project context for Claude Code)
 - "continue reading": when regular text between two narrative blocks says "continue reading" (Brethren Codex entries), the second half is labeled "<label> (cont.)"
 - Unlabeled intros: narrative before the first header → "Campaign Intro"; the first unlabeled entry by reading position in a scenario → "Intro" (or "Prologue"/"Epilogue"); skipped for Codex groups
 - `_cut_trailing_rules_text`: truncates narrative at "… is a campaign for Arkham Horror", "Check Campaign Log", "Congratulations on completing" (rules text sharing an italic text box)
-- AnkeCalligraphicFG (handwriting font for journal dates, Forgotten Age) is treated as narrative (`journal` style)
+- AnkeCalligraphicFG (handwriting font for journal dates, Forgotten Age) is treated as narrative (`journal` style); so is WolgastScript at body size (8–11pt: Daniel's margin notes and wall writing in Carcosa; larger sizes are Campaign Log decorations). Runs next to a `journal` run may be up to `MAX_JOURNAL_GAP` apart (handwriting is set off by a blank line); `*` scribble marks are dropped
+- Short passages: narrative blocks of 40–99 chars are kept only directly after their own label (`short` flag; Carcosa Dream 13, Dunwich Essex Resolution 2); otherwise `MIN_BLOCK_LENGTH` (100) applies. Blocks entirely in parentheses are dropped (bold-italic notes inside labels like `Resolution 2 (each defeated investigator…):`)
+- Bold inside a sentence: a short bold run without a colon followed by narrative that continues the sentence (lowercase/punctuation) is absorbed (`“…this isn’t Dream 1,” you say.`)
+- Campaign Log conditions in italic are not narrative: a block starting `If ` that ends in `:` or is followed by regular text starting with `,`/`:` (`is_condition`); a new-line `If …` run is not merged into the narrative above, and a trailing `.If …` sentence inside the same run is cut. A short regular gap followed by a `(`-italic card subtitle is not absorbed (`Remove Relic of Ages (Forestalling the Future)`)
+- Column continuation (`_merge_column_continuations`, after reading): an unlabeled passage that is the first block of a column is joined to the passage whose last block is the last block of the previous column (same page's left column, or the previous page's right column), same scenario. Phantom of Truth Intro 1. Runs after reading because the PDF can list the right column first
 - Auto-subgrouping via `_auto_subgroup()`: Resolutions, Intros, Parts, Codex Entries, Armitage's Fate
 - Filters via `_looks_like_non_narrative()`: encounter set lists, game state conditions, strategy tips, notes, campaign log instructions
 - Entries sorted within scenarios by `_entry_sort_key()`: intros first, then parts, then no-resolution/investigator defeat, then resolutions
@@ -81,6 +85,9 @@ CLAUDE.md               - This file (project context for Claude Code)
   3. Generic fallback: any bold text ending with `:` becomes a label if under 50 chars and doesn't start with game-mechanics verbs (Proceed, Check, Setup, etc.)
 - Generic fallback catches campaign-specific labels like "Reality's Shadow 1:", "Sebastien's Information:", "Daniel Was Possessed:", "Lola's Prologue:"
 - Checked before the tiers: `If <Name> is not listed under "...:"` (Dunwich Interlude II survivors) → label `<Name>`
+- Generic labels: a reference glued in front is dropped (`Dream 8.Dream 11:` → `Dream 11`); labels starting with a digit are table rows (`4 investigators:`), not sections
+- References are not labels: a bold label without a colon right after regular text ending in `go/proceed/skip/continue… to` or `read` is ignored (`Go to Resolution 2.`)
+- Conditional variants: an unlabeled passage right after regular text ending `If <condition>:` inside a labeled section gets `<section label> (if <condition>)` (Doom of Eztli: `Investigator Defeat (if there are four or more tally marks under “Yig’s Fury”)`). `section_label` resets on scenario change and Teutonic sub-headers
 
 ### Authentication (`auth.py`)
 - One account. Every route requires login except `/login`, `/setup`, `/logout`, `/static/*`, `/banner.jpg`, `/background.jpg`; `/api/*` → 401 JSON, pages → redirect to `/login?next=…`

@@ -20,6 +20,11 @@ MAX_SAME_LINE_OVERLAP = 14
 # Vertical jump (pt) within one style run that means the text moved to
 # another column/frame rather than the next line or paragraph.
 COLUMN_JUMP = 30
+# Handwritten notes (journal dates, notes scrawled in a book) are set off
+# from the surrounding narrative by about a blank line.
+MAX_JOURNAL_GAP = 16
+# Short italic text right after its own label ("Dream 13: …") is still a passage
+MIN_LABELED_BLOCK_LENGTH = 40
 
 
 def _char_style(char):
@@ -36,6 +41,10 @@ def _char_style(char):
         return "sub_header"
     # Handwriting font used for journal date lines (Forgotten Age) — read aloud
     if "calligraphic" in font and size < 11:
+        return "journal"
+    # Handwriting at body size: notes scrawled in a book or on a wall
+    # (Path to Carcosa). Larger sizes are Campaign Log decorations.
+    if "wolgast" in font and 8 <= size < 11:
         return "journal"
     if "bolditalic" in font:
         return "bold_italic"
@@ -126,13 +135,12 @@ def _strip_encounter_prefix(text):
 
 
 def _prescan_scenarios(pdf):
-    """Build a mapping of page_number → scenario name from Teutonic headers.
-
-    Also returns page_number → (x0, top) of each matched header, so content
-    that precedes the header on its page can stay with the previous scenario.
+    """Build a mapping of page_number → [(scenario name, (x0, top)), …] from
+    Teutonic headers, in reading order (a page can hold two, e.g. the end of
+    the Epilogue and the start of a secret scenario). The positions let
+    content that precedes a header stay with the scenario before it.
     """
-    page_scenarios = {}
-    header_positions = {}
+    page_headers = {}
 
     stop = r"(?:Setup|Standalone|DO NOT|Design|Moving|Location|Credits|Quick|Encounter|Campaign|Keywords|Expanded|The End)"
 
@@ -157,16 +165,24 @@ def _prescan_scenarios(pdf):
             r"(Design Notes)",
         ]
 
+        found = []  # (start, end, name)
         for pattern in patterns:
-            m = re.search(pattern, full_text)
-            if m:
+            for m in re.finditer(pattern, full_text):
+                if any(m.start(1) < e and s < m.end(1) for s, e, _ in found):
+                    continue  # overlaps a header already found
                 name = re.sub(r"\s+", " ", m.group(1)).strip()
-                page_scenarios[page_num] = name
-                first = header_chars[m.start(1)]
-                header_positions[page_num] = (first["x0"], first["top"])
-                break
+                found.append((m.start(1), m.end(1), name))
 
-    return page_scenarios, header_positions
+        headers = []
+        for start, _, name in found:
+            first = header_chars[start]
+            headers.append((name, (first["x0"], first["top"])))
+        mid = page.width / 2
+        headers.sort(key=lambda h: (0 if h[1][0] < mid - 20 else 1, h[1][1]))
+        if headers:
+            page_headers[page_num] = headers
+
+    return page_headers
 
 
 def _precedes_header(block, header_pos, page_width):
@@ -198,6 +214,8 @@ def _extract_page_blocks(page):
         if not current_chars:
             return
         text = "".join(c["text"] for c in current_chars)
+        if current_style == "journal":
+            text = text.replace("*", "")  # "*Carcosa is real" — a scribble mark
         raw_runs.append({
             "text": text,
             "style": current_style,
@@ -222,7 +240,35 @@ def _extract_page_blocks(page):
         or the line directly below.
         """
         gap = nxt["top"] - prev["bottom"]
-        return -MAX_SAME_LINE_OVERLAP <= gap <= MAX_LINE_GAP
+        limit = MAX_JOURNAL_GAP if "journal" in (prev["style"], nxt["style"]) else MAX_LINE_GAP
+        return -MAX_SAME_LINE_OVERLAP <= gap <= limit
+
+    def is_condition(k):
+        """Campaign Log condition set in italic, e.g. "If the investigators
+        found the missing relic, proceed to Intro 4" — the italic part ends
+        where regular text picks up with "," or ":". Not narrative."""
+        if not raw_runs[k]["text"].lstrip().startswith("If "):
+            return False
+        length = 0
+        while k < len(raw_runs):
+            r = raw_runs[k]
+            t = r["text"].strip()
+            if not r["is_narrative"]:
+                if r["style"] != "regular":
+                    return False
+                if t[:1] in (",", ":"):
+                    return length < 160
+                if len(t) >= 30:
+                    return False
+            length += len(t)
+            k += 1
+        return False
+
+    def continues_sentence(k):
+        """Run k (narrative) carries on the sentence before it: starts with
+        punctuation or lowercase, e.g. the ',” you say.' after a bold 'Dream 1'."""
+        t = raw_runs[k]["text"]
+        return bool(re.match(r"^[\s,.;:!?’”\"…—–-]*[a-z,.;:!?’”\"…]", t))
 
     for char in chars:
         style = _char_style(char)
@@ -250,6 +296,8 @@ def _extract_page_blocks(page):
                 if next_run["is_narrative"]:
                     if not spatially_continues(last_narr, next_run):
                         break
+                    if next_run["top"] > last_narr["bottom"] - 3 and is_condition(j):
+                        break
                     # Next run starts on a new line (e.g. a journal date line)
                     if next_run["top"] > last_narr["bottom"] - 3 \
                             and not parts[-1][-1:].isspace() and not next_run["text"][:1].isspace():
@@ -266,25 +314,49 @@ def _extract_page_blocks(page):
                             and len(raw_runs[k]["text"].strip()) < 30:
                         gap_parts.append(raw_runs[k]["text"])
                         k += 1
+                    # A card subtitle in italics after rules text ("Remove
+                    # Relic of Ages (Forestalling the Future)") isn't narrative
                     if (k < len(raw_runs) and raw_runs[k]["is_narrative"]
-                            and spatially_continues(last_narr, raw_runs[k])):
+                            and spatially_continues(last_narr, raw_runs[k])
+                            and not raw_runs[k]["text"].lstrip().startswith("(")):
                         parts.extend(gap_parts)
                         j = k
                     else:
                         break
+                elif (next_run["style"] == "bold" and len(next_run["text"].strip()) < 30
+                        and not next_run["text"].rstrip().endswith(":")
+                        and j + 1 < len(raw_runs) and raw_runs[j + 1]["is_narrative"]
+                        and spatially_continues(last_narr, raw_runs[j + 1])
+                        and continues_sentence(j + 1)):
+                    # A bold reference inside a sentence: '“…this isn’t Dream 1,” you say.'
+                    parts.append(next_run["text"])
+                    j += 1
                 else:
                     break
 
             text = "".join(parts)
             text = re.sub(r"\s+", " ", text).strip()
             text = _cut_trailing_rules_text(text)
+            # The same italic run can carry on into a condition: "…natural
+            # light.If the investigators found the missing relic, proceed to…"
+            if (j < len(raw_runs) and raw_runs[j]["style"] == "regular"
+                    and raw_runs[j]["text"].lstrip()[:1] in (",", ":")):
+                text = re.sub(r"(?<=[.!?”…])\s*If [^.!?”]{3,120}$", "", text)
+            condition = is_condition(i) or bool(
+                re.match(r"^If\b", text) and text.endswith(":") and len(text) < 160)
+            # A note inside a label, e.g. "Resolution 2 (each defeated
+            # investigator should resolve Investigator Defeat first):"
+            aside = bool(re.fullmatch(r"\([^()]*\)", text))
 
-            if text and not _looks_like_encounter_list(text) and not _looks_like_non_narrative(text):
+            if (text and not condition and not aside and not _looks_like_encounter_list(text)
+                    and not _looks_like_non_narrative(text)):
                 text = _strip_encounter_prefix(text)
-                if len(text) >= MIN_BLOCK_LENGTH:
+                if len(text) >= MIN_LABELED_BLOCK_LENGTH:
+                    # Short blocks only count right after their own label
                     blocks.append({"text": text, "type": "narrative",
                                    "x0": run["x0"], "top": run["top"],
-                                   "bottom": last_narr["bottom"]})
+                                   "bottom": last_narr["bottom"],
+                                   "short": len(text) < MIN_BLOCK_LENGTH})
 
             i = j
             continue
@@ -293,7 +365,8 @@ def _extract_page_blocks(page):
             text = re.sub(r"\s+", " ", run["text"]).strip()
             if text:
                 blocks.append({"text": text, "type": "bold",
-                               "x0": run["x0"], "top": run["top"]})
+                               "x0": run["x0"], "top": run["top"],
+                               "sub_header": run["style"] == "sub_header"})
             i += 1
             continue
 
@@ -351,6 +424,13 @@ def _detect_entry_label(text):
     m = re.search(r"^(.+?)\s*:\s*$", text_norm.strip())
     if m:
         label = m.group(1).strip()
+        # A reference glued to the label: "Dream 8.Dream 11:" → "Dream 11"
+        glued = re.match(r"^.*\b\w+ \d+[.!]\s*(\S.*)$", label)
+        if glued:
+            label = glued.group(1).strip()
+        # Table rows like "4 investigators:" (supply points) aren't sections
+        if re.match(r"^\d", label):
+            return None
         skip = ("proceed", "check", "otherwise", "setup", "each ", "if ", "in your",
                 "remove", "add ", "shuffle", "gather", "put ", "set ", "based on",
                 "record", "the story", "you are now",
@@ -361,6 +441,36 @@ def _detect_entry_label(text):
             return label
 
     return None
+
+
+def _merge_column_continuations(entries, column_tops):
+    """Join an unlabeled passage that opens a column to the passage that
+    closes the column before it (same page's left column, or the previous
+    page's right column): one passage flowing on, a new paragraph rather than
+    a new passage (Phantom of Truth's Intro 1). The PDF can list the second
+    column first, so this runs after everything is read."""
+    def first_in_column(pos):
+        tops = column_tops.get(pos[:2])
+        return bool(tops) and pos[2] <= min(tops) + 1
+
+    def last_in_column(pos):
+        tops = column_tops.get(pos[:2])
+        return bool(tops) and pos[2] >= max(tops) - 1
+
+    for cont in list(entries):
+        pos = cont.get("pos")
+        if cont["label"] is not None or not pos or not first_in_column(pos):
+            continue
+        page, col = pos[0], pos[1]
+        before = (page, 0) if col == 1 else (page - 1, 1)
+        for head in entries:
+            end = head.get("end")
+            if (head is not cont and head["scenario"] == cont["scenario"] and end
+                    and end[:2] == before and last_in_column(end)):
+                head["text"] = f"{head['text']} {cont['text']}"
+                head["end"] = cont.get("end")
+                entries.remove(cont)
+                break
 
 
 def _ends_sentence(text):
@@ -376,7 +486,7 @@ def _sanitize_filename(name):
 def extract_sections(pdf_path):
     """Extract read-aloud sections from an Arkham Horror campaign guide PDF."""
     with pdfplumber.open(pdf_path) as pdf:
-        page_scenarios, header_positions = _prescan_scenarios(pdf)
+        page_headers = _prescan_scenarios(pdf)
 
         current_scenario = "Ungrouped"
         last_main_scenario = "Ungrouped"
@@ -388,20 +498,30 @@ def extract_sections(pdf_path):
         # "continue reading" so the second half of e.g. a Codex entry keeps it
         continue_label = None
         last_flushed_label = None
+        # Label of the section being read, kept across its game text so a
+        # conditional passage inside it ("If there are four or more tally
+        # marks…: <narrative>") can be named after it
+        section_label = None
         # Reading position (page, column, top) of the pending entry's first
-        # block or label, and the bottom of the last narrative block added
+        # block or label, of its last narrative block, and the bottom of the
+        # last narrative block added
         pending_pos = None
+        pending_end = None
         last_narr_block = None
+        # (page, column) → tops of every block there, to spot passages that
+        # carry on from the bottom of one column to the top of the next
+        column_tops = {}
 
         def flush():
-            nonlocal pending_parts, pending_label, pending_page, last_flushed_label, pending_pos
+            nonlocal pending_parts, pending_label, pending_page, last_flushed_label, pending_pos, pending_end
             if not pending_parts:
                 pending_pos = None
+                pending_end = None
                 return
             text = " ".join(pending_parts)
             text = re.sub(r"\s+", " ", text).strip()
             text = re.sub(r"^[:\s]+", "", text)
-            min_len = 40 if pending_label else MIN_BLOCK_LENGTH
+            min_len = MIN_LABELED_BLOCK_LENGTH if pending_label else MIN_BLOCK_LENGTH
             if len(text) >= min_len:
                 entries.append({
                     "scenario": current_scenario,
@@ -409,12 +529,14 @@ def extract_sections(pdf_path):
                     "text": text,
                     "page": pending_page,
                     "pos": pending_pos,
+                    "end": pending_end,
                 })
                 last_flushed_label = pending_label
             pending_parts = []
             pending_label = None
             pending_page = None
             pending_pos = None
+            pending_end = None
 
         def reading_pos(page_num, page, block):
             if block.get("x0") is None:
@@ -432,7 +554,7 @@ def extract_sections(pdf_path):
                     return True
             return False
 
-        last_page = max(page_scenarios.keys()) + 1 if page_scenarios else len(pdf.pages)
+        last_page = max(page_headers.keys()) + 1 if page_headers else len(pdf.pages)
 
         has_page1_narrative = False
         if pdf.pages:
@@ -446,51 +568,75 @@ def extract_sections(pdf_path):
                 continue
 
             # When a header starts partway through a page (right column, or
-            # mid-column), blocks before it still belong to the old scenario.
-            header_pos = None
-            prev_scenario = page_scenario = current_scenario
+            # mid-column), blocks before it still belong to the old scenario;
+            # with two headers, blocks between them belong to the first.
+            prev_scenario = current_scenario
             prev_main_scenario = last_main_scenario
-            if page_num in page_scenarios:
+            headers = []
+            if page_num in page_headers:
                 flush()
                 pending_label = None
                 continue_label = None
                 last_flushed_label = None
-                new_scenario = page_scenarios[page_num]
-                if new_scenario == "Design Notes":
-                    pass
-                else:
-                    current_scenario = page_scenario = new_scenario
-                    header_pos = header_positions.get(page_num)
-                    if not new_scenario.startswith("Codex"):
-                        last_main_scenario = new_scenario
+                section_label = None
+                headers = [h for h in page_headers[page_num] if h[0] != "Design Notes"]
+                for name, _ in headers:
+                    if not name.startswith("Codex"):
+                        last_main_scenario = name
+                if headers:
+                    current_scenario = headers[-1][0]
+            page_scenario = current_scenario
 
             blocks = _extract_page_blocks(page)
+            prev_block = None
 
             for block in blocks:
-                if header_pos:
-                    target = prev_scenario if _precedes_header(block, header_pos, page.width) else page_scenario
+                if headers:
+                    target = prev_scenario
+                    for name, pos in headers:
+                        if _precedes_header(block, pos, page.width):
+                            break
+                        target = name
                     if target != current_scenario:
                         flush()
                         pending_label = None
                         continue_label = None
                         last_flushed_label = None
+                        section_label = None
                         current_scenario = target
+
+                if block["type"] == "narrative" and block.get("short") \
+                        and (pending_parts or pending_label is None):
+                    continue  # too short to be a passage unless it follows its label
+
+                if block.get("x0") is not None:
+                    col_key = reading_pos(page_num, page, block)[:2]
+                    column_tops.setdefault(col_key, []).append(block["top"])
 
                 if block["type"] == "bold":
                     label = _detect_entry_label(block["text"])
+                    # "…Go to Resolution 2." names another section; it isn't a label
+                    if (label and not block["text"].rstrip().endswith(":")
+                            and prev_block is not None and prev_block["type"] == "regular"
+                            and re.search(r"(?:\b(?:go|proceed|skip|continue|move|return|refer|turn)\s+to|\bread)\s*$",
+                                          prev_block["text"], re.IGNORECASE)):
+                        label = None
                     # Resolution/no-resolution on a Codex page belongs to the parent scenario
                     if label and current_scenario.startswith("Codex"):
                         is_resolution = any(k in label.lower() for k in ["resolution", "no resolution", "investigator defeat"])
                         if is_resolution:
                             flush()
-                            before_header = header_pos and _precedes_header(block, header_pos, page.width)
+                            before_header = headers and _precedes_header(block, headers[0][1], page.width)
                             current_scenario = prev_main_scenario if before_header else last_main_scenario
-                            header_pos = None  # explicit reassignment wins
+                            headers = []  # explicit reassignment wins
                     if label:
                         flush()
                         pending_label = label
+                        section_label = label
                         pending_pos = reading_pos(page_num, page, block)
                         continue_label = None
+                    elif block.get("sub_header"):
+                        section_label = None
 
                 elif block["type"] == "narrative":
                     text = block["text"]
@@ -510,10 +656,16 @@ def extract_sections(pdf_path):
                         if continue_label:
                             pending_label = f"{continue_label} (cont.)"
                             continue_label = None
+                        elif section_label and prev_block is not None and prev_block["type"] == "regular":
+                            # "If there are four or more tally marks under “Yig’s Fury”: <narrative>"
+                            m = re.search(r"\bIf ([^.:]{5,80}?)\s*:\s*$", prev_block["text"])
+                            if m:
+                                pending_label = f"{section_label} (if {m.group(1).strip()})"
                     if pending_page is None:
                         pending_page = page_num
                     if pending_pos is None:
                         pending_pos = reading_pos(page_num, page, block)
+                    pending_end = reading_pos(page_num, page, block)
                     pending_parts.append(text)
                     last_narr_block = (page_num, block.get("bottom") or block.get("top") or 0)
 
@@ -524,15 +676,20 @@ def extract_sections(pdf_path):
                         if base:
                             continue_label = re.sub(r" \(cont\.\)$", "", base)
 
-            # Following pages belong to the scenario whose header was on this page
-            if header_pos and current_scenario != page_scenario:
+                prev_block = block
+
+            # Following pages belong to the scenario whose (last) header was on this page
+            if headers and current_scenario != page_scenario:
                 flush()
                 pending_label = None
                 continue_label = None
                 last_flushed_label = None
+                section_label = None
                 current_scenario = page_scenario
 
         flush()
+
+    _merge_column_continuations(entries, column_tops)
 
     # Narrative before the first scenario header is the campaign's own intro
     for entry in entries:
