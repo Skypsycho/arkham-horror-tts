@@ -44,6 +44,7 @@ def auth_file():
 auth.init_app(app, auth_file)
 
 generation_jobs = {}
+generation_lock = threading.Lock()  # guards generation_jobs and a job's campaign-file writes
 
 AUDIO_EXTENSIONS = {'.mp3', '.wav', '.m4a', '.ogg'}
 
@@ -888,9 +889,10 @@ def api_generate(campaign_id):
     if not path.exists():
         return jsonify({"error": "Campaign not found"}), 404
 
+    body = request.get_json(silent=True) or {}
     settings = _load_settings()
-    api_key = request.json.get("api_key") or settings.get("api_key") or os.environ.get("ELEVENLABS_API_KEY")
-    voice_id = request.json.get("voice_id") or settings.get("voice_id")
+    api_key = body.get("api_key") or settings.get("api_key") or os.environ.get("ELEVENLABS_API_KEY")
+    voice_id = body.get("voice_id") or settings.get("voice_id")
     model_id = settings.get("model_id", "eleven_multilingual_v2")
 
     if not api_key:
@@ -898,29 +900,84 @@ def api_generate(campaign_id):
     if not voice_id:
         return jsonify({"error": "No voice selected"}), 400
 
-    with open(path) as f:
+    # Optional scope: one scenario (scenario_idx), or one subgroup of it (+ subgroup)
+    scope_si = body.get("scenario_idx")
+    scope_sg = body.get("subgroup")
+
+    with open(path, encoding="utf-8") as f:
         sections = json.load(f)
 
-    job_id = str(uuid.uuid4())[:8]
+    if scope_si is not None and not (isinstance(scope_si, int) and 0 <= scope_si < len(sections)):
+        return jsonify({"error": "Invalid scenario index"}), 400
+    if scope_sg is not None and scope_si is None:
+        return jsonify({"error": "subgroup needs scenario_idx"}), 400
 
-    total = sum(len(s["entries"]) for s in sections)
-    generation_jobs[job_id] = {
-        "status": "running",
-        "total": total,
-        "completed": 0,
-        "errors": 0,
-        "current": "",
-    }
+    with generation_lock:
+        for jid, j in generation_jobs.items():
+            if j["campaign_id"] == campaign_id and j["status"] == "running":
+                return jsonify({"error": "Audio is already being generated for this campaign", "job_id": jid}), 409
+
+        # Only entries without audio; already-generated ones are left alone
+        todo = []
+        for si, scenario in enumerate(sections):
+            if scope_si is not None and si != scope_si:
+                continue
+            for ei, entry in enumerate(scenario["entries"]):
+                if scope_sg is not None and entry.get("subgroup") != scope_sg:
+                    continue
+                if not entry.get("text", "").strip():
+                    continue
+                if _resolve_audio_path(campaign_id, scenario, entry).exists():
+                    continue
+                todo.append((si, ei))
+
+        job_id = str(uuid.uuid4())[:8]
+        generation_jobs[job_id] = {
+            "campaign_id": campaign_id,
+            "scope": (scope_sg if scope_sg is not None
+                      else sections[scope_si]["scenario"] if scope_si is not None
+                      else "whole campaign"),
+            "status": "running",
+            "total": len(todo),
+            "completed": 0,
+            "errors": 0,
+            "characters": sum(len(sections[si]["entries"][ei]["text"]) for si, ei in todo),
+            "current": "",
+            "last_error": "",
+        }
+
+    def save_result(si, snapshot, new_rel):
+        """Record the new audio on the entry in the file as it is *now*, so
+        edits made while the job runs are kept. The entry is found at its old
+        position, or by label + text if it was moved meanwhile."""
+        from datetime import datetime, timezone
+        with generation_lock:
+            with open(path, encoding="utf-8") as f:
+                data = json.load(f)
+
+            def same(e):
+                return e.get("label") == snapshot.get("label") and e.get("text") == snapshot.get("text")
+
+            target = None
+            if si < len(data):
+                target = next((e for e in data[si]["entries"] if same(e)), None)
+            if target is None:
+                target = next((e for s in data for e in s["entries"] if same(e)), None)
+            if target is None:
+                return False  # deleted or edited meanwhile; leave it
+            target["audio_file"] = new_rel
+            target["generated_at"] = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+            target["generated_model"] = model_id
+            with open(path, "w", encoding="utf-8") as f:
+                json.dump(data, f, indent=2, ensure_ascii=False)
+            return True
 
     def run_generation():
         job = generation_jobs[job_id]
-        for scenario in sections:
-            for entry in scenario["entries"]:
-                existing = _resolve_audio_path(campaign_id, scenario, entry)
-                if existing.exists():
-                    job["completed"] += 1
-                    continue
-
+        try:
+            for si, ei in todo:
+                scenario = sections[si]
+                entry = scenario["entries"][ei]
                 new_rel = _build_audio_path(campaign_id, scenario, entry, ext='mp3')
                 filepath = AUDIO_DIR / new_rel
                 filepath.parent.mkdir(parents=True, exist_ok=True)
@@ -934,27 +991,21 @@ def api_generate(campaign_id):
                         voice_id=voice_id,
                         model_id=model_id,
                     )
-                    from datetime import datetime, timezone
-                    entry["audio_file"] = new_rel
-                    entry["generated_at"] = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
-                    entry["generated_model"] = model_id
+                    save_result(si, entry, new_rel)
                     job["completed"] += 1
                 except Exception as e:
                     job["errors"] += 1
-                    job["current"] = f"Error: {e}"
+                    job["last_error"] = str(e)
 
                 time.sleep(0.2)
-
-        with open(path, "w", encoding="utf-8") as f:
-            json.dump(sections, f, indent=2, ensure_ascii=False)
-
-        job["status"] = "complete"
-        job["current"] = ""
+        finally:
+            job["status"] = "complete"
+            job["current"] = ""
 
     thread = threading.Thread(target=run_generation, daemon=True)
     thread.start()
 
-    return jsonify({"job_id": job_id})
+    return jsonify({"job_id": job_id, "total": len(todo)})
 
 
 @app.route("/api/generate/status/<job_id>")
@@ -963,6 +1014,15 @@ def api_generate_status(job_id):
     if not job:
         return jsonify({"error": "Job not found"}), 404
     return jsonify(job)
+
+
+@app.route("/api/generate/active/<campaign_id>")
+def api_generate_active(campaign_id):
+    """The campaign's running bulk job, if any (lets a reloaded page pick it up)."""
+    for jid, j in list(generation_jobs.items()):
+        if j["campaign_id"] == campaign_id and j["status"] == "running":
+            return jsonify({"job_id": jid, **j})
+    return jsonify({"job_id": None})
 
 
 @app.route("/api/settings", methods=["GET"])

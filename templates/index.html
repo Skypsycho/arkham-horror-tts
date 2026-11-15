@@ -396,6 +396,12 @@ body.is-dragging-scenario .scenario-group > * { pointer-events: none; }
 .subgroup-header:hover .del-sg-btn { display: flex; }
 .subgroup-header .del-sg-btn:hover { background: var(--danger); color: #fff; }
 
+/* ⚡ bulk generation on scenario / subgroup headers (hover, Edit mode only) */
+.scenario-header .gen-bulk-btn, .subgroup-header .gen-bulk-btn { color: var(--success); }
+.scenario-header .gen-bulk-btn:hover, .subgroup-header .gen-bulk-btn:hover { background: var(--success); color: #fff; }
+.gen-bulk-btn.busy, .gen-all-btn.busy { opacity: 0.4; cursor: default; }
+.gen-bulk-btn.busy:hover { background: transparent !important; color: var(--success) !important; }
+
 .subgroup-section.dragging { opacity: 0.4; }
 .subgroup-section.drag-over-section { border-top: 2px solid var(--accent); }
 
@@ -691,6 +697,37 @@ body.is-dragging .scenario-header > * { pointer-events: none; }
 }
 
 .library-toolbar .toolbar-stats { font-size: 12px; color: var(--text2); white-space: nowrap; }
+.library-toolbar { flex-wrap: wrap; }
+
+.gen-all-btn {
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--success);
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.gen-all-btn:hover { background: var(--success); border-color: var(--success); color: #fff; }
+.gen-all-btn.busy:hover, .gen-all-btn.none:hover { background: var(--bg); border-color: var(--border); color: var(--success); }
+.gen-all-btn.none { opacity: 0.4; cursor: default; }
+
+.bulk-progress {
+  flex-basis: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+  color: var(--text2);
+}
+.bulk-progress .bp-bar { flex: 0 0 160px; height: 4px; background: var(--bg3); border-radius: 2px; overflow: hidden; }
+.bulk-progress .bp-fill { height: 100%; background: var(--success); transition: width 0.4s; }
+.bulk-progress .bp-text { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bulk-progress.done .bp-text { color: var(--success); }
+.bulk-progress.has-errors .bp-text { color: var(--danger); }
+.bulk-progress .bp-close { border: none; background: transparent; color: var(--text2); cursor: pointer; font-size: 12px; padding: 0 4px; }
 
 .mode-switch {
   display: flex;
@@ -1000,6 +1037,8 @@ body.mode-edit .entry-wrapper.card-back .entry-info .label::before {
 @media (max-width: 700px) {
   .library-toolbar { padding: 8px 12px; }
   .library-toolbar .toolbar-stats { display: none; }
+  .gen-all-btn .ga-label { display: none; }
+  .bulk-progress .bp-bar { flex-basis: 80px; }
   .mode-switch button { padding: 6px 10px; }
   .play-list-item { padding: 12px 16px; }
   .pl-chips { display: none; }
@@ -1648,6 +1687,7 @@ input:focus { outline: none; border-color: var(--accent); }
       <li>Click an entry's text to correct it. It saves when you click away.</li>
       <li><span class="help-key">&#9998;</span> renames entries, scenarios and groups. Drag the handles to reorder or move entries between scenarios.</li>
       <li><span class="help-key">&#9889;</span> generates audio for one entry, <span class="help-key">&#8635;</span> regenerates it, and <span class="help-key">&#128206;</span> attaches your own recording instead.</li>
+      <li><span class="help-key">&#9889; Generate all</span> in the toolbar generates every entry that has no audio yet. Hover a scenario or a group (such as an Agenda or Act deck) for its own <span class="help-key">&#9889;</span>. It shows how many characters it will use before it starts, and skips entries that already have audio.</li>
       <li>Deleting asks first, and keeps the audio files by default.</li>
     </ul>
 
@@ -1917,6 +1957,7 @@ async function selectCampaign(id) {
   currentCampaignData = await res.json();
   renderScenarios();
   loadLibrary();
+  resumeBulkJob(id);
 }
 
 function buildExpandedHtml(si, ei, entry, caption = '') {
@@ -2334,7 +2375,8 @@ function renderScenarios() {
     const scenarioOpen = openState.scenarios[si] !== undefined ? openState.scenarios[si] : true;
     const header = document.createElement('div');
     header.className = 'scenario-header' + (scenarioOpen ? ' open' : '');
-    header.innerHTML = `<span class="arrow">&#9654;</span> <span class="scenario-name">${escHtml(scenario.scenario)}</span><button class="edit-name-btn" title="Rename">&#9998;</button><button class="edit-name-btn add-sg-btn" title="Add subgroup">&#8862;</button><button class="edit-name-btn add-entry-btn" title="Add entry">&#43;</button><button class="del-campaign-btn" title="Delete group">&#10005;</button>`;
+    const scMissing = missingAudioEntries(si).length;
+    header.innerHTML = `<span class="arrow">&#9654;</span> <span class="scenario-name">${escHtml(scenario.scenario)}</span><button class="edit-name-btn" title="Rename">&#9998;</button><button class="edit-name-btn add-sg-btn" title="Add subgroup">&#8862;</button><button class="edit-name-btn add-entry-btn" title="Add entry">&#43;</button>${scMissing ? `<button class="edit-name-btn gen-bulk-btn${bulkJobRunning() ? ' busy' : ''}" title="Generate audio for this scenario (${scMissing} without audio)">&#9889;</button>` : ''}<button class="del-campaign-btn" title="Delete group">&#10005;</button>`;
 
     header.dataset.si = si;
     header.dataset.subgroup = '__none__';
@@ -2353,6 +2395,11 @@ function renderScenarios() {
     header.querySelector('.add-entry-btn').onclick = (e) => {
       e.stopPropagation();
       addEntry(si);
+    };
+    const scGenBtn = header.querySelector('.gen-bulk-btn');
+    if (scGenBtn) scGenBtn.onclick = (e) => {
+      e.stopPropagation();
+      confirmBulkGenerate(si, null);
     };
     header.querySelector('.edit-name-btn').onclick = (e) => {
       e.stopPropagation();
@@ -2446,7 +2493,8 @@ function renderScenarios() {
       const sgOpen = openState.subgroups[sgKey] !== undefined ? openState.subgroups[sgKey] : false;
       const sgHeader = document.createElement('div');
       sgHeader.className = 'subgroup-header' + (sgOpen ? ' open' : '');
-      sgHeader.innerHTML = `<span class="arrow">&#9654;</span> <span class="subgroup-name">${escHtml(sgName)}</span> <span style="opacity:0.5">(${indices.length})</span> <button class="edit-name-btn" title="Rename subgroup">&#9998;</button><button class="edit-name-btn add-entry-btn" title="Add entry to subgroup">&#43;</button><button class="del-sg-btn" title="Delete subgroup">&#10005;</button>`;
+      const sgMissing = missingAudioEntries(si, sgName).length;
+      sgHeader.innerHTML = `<span class="arrow">&#9654;</span> <span class="subgroup-name">${escHtml(sgName)}</span> <span style="opacity:0.5">(${indices.length})</span> <button class="edit-name-btn" title="Rename subgroup">&#9998;</button><button class="edit-name-btn add-entry-btn" title="Add entry to subgroup">&#43;</button>${sgMissing ? `<button class="edit-name-btn gen-bulk-btn${bulkJobRunning() ? ' busy' : ''}" title="Generate audio for this subgroup (${sgMissing} without audio)">&#9889;</button>` : ''}<button class="del-sg-btn" title="Delete subgroup">&#10005;</button>`;
 
       sgHeader.dataset.si = si;
       sgHeader.dataset.subgroup = sgName;
@@ -2465,6 +2513,11 @@ function renderScenarios() {
       sgHeader.querySelector('.add-entry-btn').onclick = (e) => {
         e.stopPropagation();
         addEntry(si, sgName);
+      };
+      const sgGenBtn = sgHeader.querySelector('.gen-bulk-btn');
+      if (sgGenBtn) sgGenBtn.onclick = (e) => {
+        e.stopPropagation();
+        confirmBulkGenerate(si, sgName);
       };
       sgHeader.onclick = () => {
         sgHeader.classList.toggle('open');
@@ -2495,14 +2548,21 @@ function buildLibraryToolbar() {
   let total = 0, withAudio = 0;
   currentCampaignData.forEach(s => s.entries.forEach(e => { total++; if (e.has_audio) withAudio++; }));
   const name = campaignNames[currentCampaignId] || currentCampaignId;
+  const missing = missingAudioEntries(null).length;
+  const genAll = isPlayMode() ? '' : `
+    <button class="gen-all-btn${bulkJobRunning() ? ' busy' : missing ? '' : ' none'}"
+      title="${missing ? `Generate audio for every entry without audio (${missing})` : 'Every entry has audio'}">&#9889;<span class="ga-label"> Generate all</span>${missing ? ` (${missing})` : ''}</button>`;
   bar.innerHTML = `
     <div class="toolbar-title" title="${escAttr(name)}">${escHtml(name)}</div>
-    <div class="toolbar-stats">${withAudio}/${total} with audio</div>
+    <div class="toolbar-stats">${withAudio}/${total} with audio</div>${genAll}
     <div class="mode-switch" role="tablist" aria-label="View mode">
       <button class="${isPlayMode() ? 'active' : ''}" data-mode="play" title="Titles and play buttons only">&#9654; Play</button>
       <button class="${isPlayMode() ? '' : 'active'}" data-mode="edit" title="Text, generation and organizing tools">&#9998; Edit</button>
     </div>`;
   bar.querySelectorAll('.mode-switch button').forEach(b => b.onclick = () => setViewMode(b.dataset.mode));
+  const genAllBtn = bar.querySelector('.gen-all-btn');
+  if (genAllBtn) genAllBtn.onclick = () => { if (missing) confirmBulkGenerate(null, null); };
+  if (bulkJob && bulkJob.campaignId === currentCampaignId) bar.appendChild(buildBulkProgress());
   return bar;
 }
 
@@ -3355,69 +3415,161 @@ async function importFromArkhamDB() {
   btn.disabled = false;
 }
 
-async function generateAudio() {
-  const campaignId = document.getElementById('genCampaign').value;
-  if (!campaignId) {
-    document.getElementById('genStatus').textContent = 'Select a campaign first.';
-    document.getElementById('genStatus').className = 'status-msg error';
-    return;
-  }
+// ── Bulk generation (whole campaign / scenario / subgroup) ──
+// One job per campaign runs on the server; bulkJob mirrors it for the toolbar.
+let bulkJob = null;   // { campaignId, jobId, scope, total, completed, errors, current, lastError, done }
+let bulkPoll = null;
+
+function bulkJobRunning() {
+  return !!(bulkJob && !bulkJob.done && bulkJob.campaignId === currentCampaignId);
+}
+
+// Entries without audio (and with text) in the campaign, one scenario, or one subgroup
+function missingAudioEntries(si, sgName) {
+  const out = [];
+  (currentCampaignData || []).forEach((s, i) => {
+    if (si !== null && si !== undefined && i !== si) return;
+    s.entries.forEach(e => {
+      if (sgName && e.subgroup !== sgName) return;
+      if (!e.has_audio && e.text && e.text.trim()) out.push(e);
+    });
+  });
+  return out;
+}
+
+async function confirmBulkGenerate(si, sgName) {
+  if (bulkJobRunning()) return;
+  const entries = missingAudioEntries(si, sgName);
+  if (!entries.length) return;
 
   const settings = await (await fetch('/api/settings')).json();
-  if (!settings.api_key_set) {
-    document.getElementById('genStatus').textContent = 'Set your API key in Settings first.';
-    document.getElementById('genStatus').className = 'status-msg error';
-    return;
-  }
-  if (!settings.voice_id) {
-    document.getElementById('genStatus').textContent = 'Set a voice ID in Settings first.';
-    document.getElementById('genStatus').className = 'status-msg error';
-    return;
-  }
+  if (!settings.api_key_set) { alert('Set your ElevenLabs API key in Settings first.'); return; }
+  if (!settings.voice_id) { alert('Set a voice ID in Settings first.'); return; }
 
-  const btn = document.getElementById('generateBtn');
-  btn.disabled = true;
-
-  const progress = document.getElementById('genProgress');
-  progress.style.display = 'block';
-
-  const res = await fetch(`/api/generate/${campaignId}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({}),
-  });
-  const data = await res.json();
-
-  if (data.error) {
-    document.getElementById('genStatus').textContent = data.error;
-    document.getElementById('genStatus').className = 'status-msg error';
-    btn.disabled = false;
-    return;
-  }
-
-  const jobId = data.job_id;
-  const poll = setInterval(async () => {
-    const sRes = await fetch(`/api/generate/status/${jobId}`);
-    const job = await sRes.json();
-    const pct = job.total > 0 ? (job.completed / job.total) * 100 : 0;
-    document.getElementById('genProgressFill').style.width = pct + '%';
-    document.getElementById('genStatus').textContent =
-      `${job.completed}/${job.total} generated` + (job.current ? ` — ${job.current}` : '') +
-      (job.errors > 0 ? ` (${job.errors} errors)` : '');
-    document.getElementById('genStatus').className = 'status-msg';
-
-    if (job.status === 'complete') {
-      clearInterval(poll);
-      document.getElementById('genStatus').textContent =
-        `Complete! ${job.completed}/${job.total} files generated.` +
-        (job.errors > 0 ? ` ${job.errors} errors.` : '');
-      document.getElementById('genStatus').className = 'status-msg success';
-      btn.disabled = false;
-      loadLibrary();
-      refreshCampaignSelect();
-      loadCredits();
+  const chars = entries.reduce((n, e) => n + e.text.length, 0);
+  let creditsNote = '';
+  try {
+    const c = await (await fetch('/api/credits')).json();
+    if (!c.error && typeof c.remaining === 'number') {
+      creditsNote = ` You have ${c.remaining.toLocaleString()} left.` +
+        (c.remaining < chars ? ' That is not enough for all of them.' : '');
     }
-  }, 2000);
+  } catch (e) { /* credits are informational only */ }
+
+  const where = sgName ? `"${sgName}" (${currentCampaignData[si].scenario})`
+    : si !== null ? `"${currentCampaignData[si].scenario}"`
+    : `the whole campaign`;
+  const n = entries.length;
+  showModal(
+    'Generate Audio',
+    `Generate audio for ${n} ${n === 1 ? 'entry' : 'entries'} without audio in ${where}? ` +
+    `This uses about ${chars.toLocaleString()} ElevenLabs characters.${creditsNote} ` +
+    `Entries that already have audio are skipped.`,
+    () => startBulkGenerate(si, sgName),
+    false, 'Generate', 'btn-primary'
+  );
+}
+
+async function startBulkGenerate(si, sgName) {
+  const campaignId = currentCampaignId;
+  const body = {};
+  if (si !== null) body.scenario_idx = si;
+  if (sgName) body.subgroup = sgName;
+  let data;
+  try {
+    const res = await fetch(`/api/generate/${campaignId}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    data = await res.json();
+  } catch (e) {
+    alert('Network error: ' + e.message);
+    return;
+  }
+  if (data.error && !data.job_id) { alert('Generation failed: ' + data.error); return; }
+  // 409: a job is already running for this campaign — follow that one instead
+  watchBulkJob(campaignId, data.job_id);
+}
+
+async function resumeBulkJob(campaignId) {
+  if (bulkJob && bulkJob.campaignId === campaignId) return;
+  try {
+    const data = await (await fetch(`/api/generate/active/${campaignId}`)).json();
+    if (data.job_id && currentCampaignId === campaignId) watchBulkJob(campaignId, data.job_id);
+  } catch (e) { /* nothing running */ }
+}
+
+function watchBulkJob(campaignId, jobId) {
+  if (bulkPoll) clearInterval(bulkPoll);
+  bulkJob = { campaignId, jobId, scope: '', total: 0, completed: 0, errors: 0, current: '', lastError: '', done: false };
+  renderScenarios();
+  const tick = async () => {
+    let job;
+    try {
+      const res = await fetch(`/api/generate/status/${jobId}`);
+      if (!res.ok) throw new Error('job not found');
+      job = await res.json();
+    } catch (e) {
+      clearInterval(bulkPoll); bulkPoll = null;
+      bulkJob = null;
+      if (currentCampaignId === campaignId) refreshAndRender();
+      return;
+    }
+    const progressed = job.completed !== bulkJob.completed;
+    bulkJob.scope = job.scope || '';
+    bulkJob.total = job.total;
+    bulkJob.completed = job.completed;
+    bulkJob.errors = job.errors;
+    bulkJob.current = job.current || '';
+    bulkJob.lastError = job.last_error || '';
+    if (job.status === 'complete') {
+      clearInterval(bulkPoll); bulkPoll = null;
+      bulkJob.done = true;
+      loadCredits();
+      loadLibrary();
+      if (currentCampaignId === campaignId) await refreshAndRender();
+      return;
+    }
+    // Show newly generated entries, unless that would interrupt typing
+    const a = document.activeElement;
+    const typing = a && (a.tagName === 'TEXTAREA' || a.tagName === 'INPUT');
+    if (progressed && !typing && currentCampaignId === campaignId) await refreshAndRender();
+    else updateBulkProgress();
+  };
+  bulkPoll = setInterval(tick, 2000);
+  tick();
+}
+
+function buildBulkProgress() {
+  const el = document.createElement('div');
+  el.id = 'bulkProgress';
+  fillBulkProgress(el);
+  return el;
+}
+
+function updateBulkProgress() {
+  const el = document.getElementById('bulkProgress');
+  if (el) fillBulkProgress(el);
+}
+
+function fillBulkProgress(el) {
+  const j = bulkJob;
+  const pct = j.total ? (j.completed + j.errors) / j.total * 100 : 0;
+  const scope = j.scope ? ` ${j.scope}` : '';
+  let text;
+  if (!j.done) {
+    text = `Generating${scope}: ${j.completed}/${j.total}` + (j.current ? ` — ${j.current}` : '');
+  } else {
+    text = `${j.scope ? j.scope.charAt(0).toUpperCase() + j.scope.slice(1) + ' finished' : 'Finished'}: ${j.completed}/${j.total} generated`;
+  }
+  if (j.errors) text += ` · ${j.errors} failed` + (j.lastError ? ` (${j.lastError})` : '');
+  el.className = 'bulk-progress' + (j.done ? ' done' : '') + (j.errors ? ' has-errors' : '');
+  el.innerHTML = `<div class="bp-bar"><div class="bp-fill" style="width:${pct}%"></div></div>` +
+    `<div class="bp-text" title="${escAttr(text)}">${escHtml(text)}</div>` +
+    (j.done ? '<button class="bp-close" title="Dismiss">&#10005;</button>' : '');
+  const close = el.querySelector('.bp-close');
+  if (close) close.onclick = () => { bulkJob = null; el.remove(); };
 }
 
 // ── Settings ──
@@ -3455,9 +3607,12 @@ async function saveSettings() {
 // ── Delete / Confirmation Modal ──
 let pendingAction = null;
 
-function showModal(title, message, onConfirm, showKeepAudio = false) {
+function showModal(title, message, onConfirm, showKeepAudio = false, confirmText = 'Delete', confirmClass = 'btn-danger') {
   document.getElementById('confirmTitle').textContent = title;
   document.getElementById('confirmMessage').textContent = message;
+  const confirmBtn = document.getElementById('confirmBtn');
+  confirmBtn.textContent = confirmText;
+  confirmBtn.className = 'btn ' + confirmClass;
   const keepLabel = document.getElementById('keepAudioLabel');
   const keepCheckbox = document.getElementById('keepAudioCheckbox');
   if (showKeepAudio) {

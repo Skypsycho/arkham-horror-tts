@@ -104,7 +104,7 @@ CLAUDE.md               - This file (project context for Claude Code)
 - Entries can have audio attached via file upload (attach-audio endpoint) instead of TTS generation
 - Settings in `settings.json` (API key, voice ID, model ID)
 - TTS model is configurable in Settings (supports eleven_v4, eleven_v4_turbo, eleven_v3, eleven_multilingual_v2, etc.)
-- Background thread for bulk TTS generation with job status polling
+- Background thread for bulk TTS generation with job status polling. `POST /api/generate/<id>` takes an optional scope (`scenario_idx`, + `subgroup`), only generates entries without audio (and with text), allows one running job per campaign (409 returns the running `job_id`), and saves each result into the file as it is *now* (entry found at its old position or by label + text), so edits made during a job survive
 - Single-entry generation/regeneration via `/api/campaign/<id>/generate-entry`
 - Entry metadata: `generated_at` timestamp and `generated_model` saved per entry on generation
 - Credits indicator via ElevenLabs `/v1/user/subscription` endpoint (requires `user_read` API key permission)
@@ -116,6 +116,7 @@ CLAUDE.md               - This file (project context for Claude Code)
 - **Selected campaign marker**: the active row (70px tall) shows the painted side-view Cthulhu head (`static/cthulhu-profile.png`) emerging from the left edge (1.5× the row height with the crown and eyes in view, shoulders cut off below, ~35% past the left edge), with pulsing eye glows (positions are % of the image in `CTHULHU_ART`) and five tentacle arms inlined from `static/cthulhu-arms.svg` (drawn for 260×70; `preserveAspectRatio="none"` + `width: 100%` stretch them when the sidebar is narrower, e.g. 210px on the tablet). Everything is clipped to the row (`.cthulhu-mark { overflow: hidden }`). Entrance animation (head rises, arms grow) plays only when switching campaigns (`no-grow` class on re-render); honours `prefers-reduced-motion`. To change the arms edit `ARMS` in `tools/cthulhu_svg.py` and run it; to re-cut art run `tools/cutout_checkerboard.py <src> static/cthulhu-profile.png`
 - **Play / Edit modes** (toolbar switch, remembered in localStorage `viewMode`): Edit mode shows the full scenario/subgroup tree with all tools plus a 2-line text preview. Play mode (`renderPlayMode`) shows a list of scenarios; clicking one (`playScenario`) fills the panel with: intro button(s) (ungrouped + `Intros` entries), one big Agenda card and one big Act card, then the other subgroups (Resolutions, Codex…) as collapsible play rows. "‹ Previous" / "Next ›" in the header step to the neighbouring scenario
 - **Act/agenda cards**: entries in `* Deck` subgroups labelled `Agenda: Name (Front|Back)` (optionally `– Variant`) are parsed by `parseCard`; `buildDeck` turns them into ordered steps (each card's front, then back). The card shows the current side with play button(s) (one per variant) and "Flip to back" / "Next card", plus ‹ to step back. Position per deck is stored in localStorage (`deckPos|<campaign>|<scenario name>|<Agenda|Act>`); "Reset decks" returns both to the first card. In Edit mode backs are indented under their front with a "↳ flip side" marker
+- **Bulk generation (Edit mode)**: "⚡ Generate all (N)" in the library toolbar, and a hover ⚡ on each scenario and subgroup header (shown only when something lacks audio). A confirm modal (`showModal` with confirm text/class) shows entry count, characters and remaining credits. `bulkJob` mirrors the server job; a progress row in the toolbar updates every 2s, re-rendering when an entry finishes unless an input/textarea has focus. `resumeBulkJob` picks up a running job when a campaign is opened (`/api/generate/active/<id>`)
 - **Entries**: play/pause toggle button, drag handle, rename (pencil icon), expand/edit text (auto-saves on collapse or click-away), generate/regenerate audio, attach audio file (paperclip icon), info popover (timestamp + model), delete
 - **Subgroups**: collapsible (collapsed by default), renameable, deleteable, draggable for reordering within and across scenarios
 - **Groups (scenarios)**: renameable, deleteable, draggable for reordering, add-subgroup button — all action icons appear on hover only
@@ -176,6 +177,7 @@ python -m pytest -m "not pdf"   # fast unit + ArkhamDB tests only
 - `tests/test_extract_guides.py` (`pdf` marker) — runs extraction on the real guides in `uploads/` (or `$ARKHAM_PDF_DIR`); skipped if a PDF is missing. Pins verified behaviors per campaign; unlabeled counts are upper bounds — tighten them when extraction improves
 - `tests/test_arkhamdb_import.py` — import endpoint with saved pack responses in `tests/fixtures/` (no network)
 - `tests/test_auth.py` — login, setup token, lockout, logout, API key never returned
+- `tests/test_generate_bulk.py` — bulk generation scope, skipping, edits during a job, one job per campaign (fake TTS)
 - `tests/test_merge.py` — merge rules on synthetic campaigns (edits/audio/cards protected, moves, fragments, additions)
 - Run the suite after any change to `extract.py`; fixes for one campaign often regress another
 
@@ -187,8 +189,9 @@ python -m pytest -m "not pdf"   # fast unit + ArkhamDB tests only
 - `GET /api/ffg-campaigns` - List available FFG campaign guide PDFs
 - `POST /api/ffg-download` - Download FFG campaign guide PDF and extract sections
 - `POST /api/extract` - Upload PDF and extract sections (multipart form)
-- `POST /api/generate/<id>` - Bulk generate audio (background job, returns job_id)
+- `POST /api/generate/<id>` - Bulk generate missing audio (background job, returns job_id + total); optional `scenario_idx` / `subgroup` scope
 - `GET /api/generate/status/<job_id>` - Poll bulk generation progress
+- `GET /api/generate/active/<id>` - The campaign's running bulk job, if any
 - `POST /api/campaign/<id>/generate-entry` - Generate/regenerate single entry audio
 - `POST /api/campaign/<id>/attach-audio` - Upload/attach audio file to entry (multipart form, accepts mp3/wav/m4a/ogg)
 - `PUT /api/campaign/<id>` - Replace full campaign data
